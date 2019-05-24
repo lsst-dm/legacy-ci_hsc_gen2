@@ -4,9 +4,14 @@ config.log
 .scons
 DATA
 *.pyc
-bin/
+bin/*.py
 .cache
 .pytest_cache
 pytest_session.txt
 .coverage
 _build.*
+CALIB
+brightObjectMasks
+job_job.log
+ps1_pv3_3pi_20170110
+raw

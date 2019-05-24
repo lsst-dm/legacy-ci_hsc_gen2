@@ -15,5 +15,6 @@ setupRequired(sconsUtils)
 setupRequired(utils)
 setupRequired(pipe_drivers)
 setupRequired(daf_butler)
+setupRequired(testdata_ci_hsc)
 
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)

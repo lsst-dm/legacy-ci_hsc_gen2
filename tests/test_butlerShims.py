@@ -32,7 +32,7 @@ from lsst.daf.butler import Butler as Butler3, DatasetType
 from lsst.pipe.base.shims import ShimButler
 
 
-REPO_ROOT = os.path.join(getPackageDir("ci_hsc"), "DATA")
+REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 TESTDIR = os.path.abspath(os.path.dirname(__file__))
 
 

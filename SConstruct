@@ -5,12 +5,12 @@ from collections import defaultdict
 from lsst.pipe.base import Struct
 from lsst.sconsUtils.utils import libraryLoaderEnvironment
 from lsst.utils import getPackageDir
-from lsst.ci.hsc.validate import (RawValidation, DetrendValidation, SfmValidation,
-                                  SkyCorrValidation, SkymapValidation, WarpValidation,
-                                  CoaddValidation, DetectionValidation, MergeDetectionsValidation,
-                                  MeasureValidation, MergeMeasurementsValidation,
-                                  ForcedPhotCoaddValidation, ForcedPhotCcdValidation,
-                                  VersionValidation, DeblendSourcesValidation)
+from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmValidation,
+                                       SkyCorrValidation, SkymapValidation, WarpValidation,
+                                       CoaddValidation, DetectionValidation, MergeDetectionsValidation,
+                                       MeasureValidation, MergeMeasurementsValidation,
+                                       ForcedPhotCoaddValidation, ForcedPhotCcdValidation,
+                                       VersionValidation, DeblendSourcesValidation)
 
 from SCons.Script import SConscript
 SConscript(os.path.join(".", "bin.src", "SConscript"))  # build bin scripts
@@ -36,7 +36,7 @@ def validate(cls, root, dataId=None, gen3id=None, **kwargs):
         dataId.update(kwargs)
     elif kwargs:
         dataId = kwargs
-    cmd = [getExecutable("ci_hsc", "validate.py"), cls.__name__, root]
+    cmd = [getExecutable("ci_hsc_gen2", "validate.py"), cls.__name__, root]
     gen3 = cmd + ["--gen3", "--collection", "shared/ci_hsc"]
     if dataId:
         cmd += ["--id %s" % (" ".join("%s=%s" % (key, value) for key, value in dataId.items()))]
@@ -213,9 +213,11 @@ allData = {"HSC-R": [Data(903334, 16),
                      Data(903988, 24),
                      ],
            }
+# Link against existing data
+links = env.Command(["CALIB", "raw", "brightObjectMasks", "ps1_pv3_3pi_20170110"], [], ["bin/linker.sh"])
 
 # Set up the data repository
-mapper = env.Command(os.path.join(REPO, "_mapper"), ["bin"],
+mapper = env.Command(os.path.join(REPO, "_mapper"), ["bin", links],
                      ["mkdir -p " + REPO,
                       "echo lsst.obs.hsc.HscMapper > " + os.path.join(REPO, "_mapper"),
                       ])
@@ -410,13 +412,13 @@ forcedPhotCcd = [data.forced(env, tract=0) for data in sum(allData.values(), [])
 gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
                        [forcedPhotCcd, forcedPhotCoadd],
                        [getExecutable("daf_butler", "makeButlerRepo.py") + " " + REPO,
-                        getExecutable("ci_hsc", "gen3.py") + " --verbose"])
+                        getExecutable("ci_hsc_gen2", "gen3.py") + " --verbose"])
 env.Alias("gen3repo", gen3repo)
 
 gen3repoValidate = [command("gen3repo-{}".format(k), [gen3repo], v) for k, v in gen3validateCmds.items()]
 env.Alias("gen3repo-validate", gen3repoValidate)
 
-tests = [command(f"test_{name}", [gen3repo], getExecutable("ci_hsc", f"test_{name}.py", "tests"))
+tests = [command(f"test_{name}", [gen3repo], getExecutable("ci_hsc_gen2", f"test_{name}.py", "tests"))
          for name in ("import", "butlerShims", "gen2convert")]
 
 env.Alias("tests", tests)
@@ -433,4 +435,4 @@ env.Alias("install", "SConstruct")
 env.Alias("all", everything)
 Default(everything)
 
-env.Clean(everything, [".scons", "DATA/rerun/ci_hsc"])
+env.Clean(everything, [".scons", "DATA/rerun/ci_hsc"] + [x for x in links] + ["DATA"])
