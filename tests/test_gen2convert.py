@@ -32,7 +32,7 @@ from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
 from lsst.pipe.tasks.objectMasks import ObjectMaskCatalog
 
 
-REPO_ROOT = os.path.join(getPackageDir("ci_hsc"), "DATA")
+REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 
 
 class Gen2ConvertTestCase(lsst.utils.tests.TestCase):

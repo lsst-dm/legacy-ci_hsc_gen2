@@ -27,13 +27,13 @@ from lsst.utils import getPackageDir
 from lsst.daf.butler import Butler, ButlerConfig, Registry, Datastore, Config, StorageClassFactory
 from lsst.daf.butler.gen2convert import ConversionWalker, ConversionWriter
 
-REPO_ROOT = os.path.join(getPackageDir("ci_hsc"), "DATA")
+REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 
 converterConfig = Config(os.path.join(getPackageDir("daf_butler"), "config/gen2convert.yaml"))
 converterConfig["skymaps"] = {"ci_hsc": os.path.join(REPO_ROOT, "rerun", "ci_hsc")}
 converterConfig["regions"][0]["collection"] = "shared/ci_hsc"
 
-searchPaths = [os.path.join(getPackageDir("ci_hsc"), "gen3config"), ]
+searchPaths = [os.path.join(getPackageDir("ci_hsc_gen2"), "gen3config"), ]
 
 
 class Gen3ButlerWrapper:
@@ -62,9 +62,23 @@ class Gen3ButlerWrapper:
         self.butlerConfig.configDir = self.root
 
     def getRegistry(self):
+        """Returns the registry associated with this butler wrapper
+
+        Returns
+        -------
+        registry : `lsst.daf.butler.Registry`
+            Registry object associated with this butler wrapper
+        """
         return Registry.fromConfig(self.butlerConfig, butlerRoot=self.root)
 
     def getDatastore(self, registry):
+        """Returns the datastore associated with this butler wrapper
+
+        Returns
+        -------
+        datastore : `lsst.daf.butler.Datastore`
+            Datastore object associated with this butler wrapper
+        """
         return Datastore.fromConfig(config=self.butlerConfig, registry=registry, butlerRoot=self.root)
 
     def getButler(self, collection):
@@ -72,6 +86,17 @@ class Gen3ButlerWrapper:
 
 
 def walk():
+    """This function walks and parses the gen2 butler repo
+    defined at module scope, recording information about the
+    structure of the repo, as well as some associated metadata.
+    The ConversionWalker instance that performs the work is
+    returned for later consumption.
+
+    Returns
+    ------
+    walker : lsst.daf.butler.gen2convert.ConversionWalker
+        Object which has walked and recorded info on a gen2 repo
+    """
     walker = ConversionWalker(converterConfig)
     walker.tryRoot(REPO_ROOT)
     walker.scanAll()
@@ -80,5 +105,15 @@ def walk():
 
 
 def write(walker, registry, datastore):
+    """write is a function that writes a converted gen2 repo into a registry
+    and datastore associated with a gen3 repository
+
+    Parameters
+    ----------
+    registry : `lsst.daf.butler.Registry`
+        Registry object associated with this butler wrapper
+    datastore : `lsst.daf.butler.Datastore`
+        Datastore object associated with this butler wrapper
+    """
     writer = ConversionWriter.fromWalker(walker)
     writer.run(registry, datastore)

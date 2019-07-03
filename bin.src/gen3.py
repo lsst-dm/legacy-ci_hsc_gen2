@@ -26,7 +26,7 @@ import argparse
 
 import lsst.log
 from lsst.log import Log
-from lsst.ci.hsc import gen3, Gen3ButlerWrapper
+from lsst.ci.hsc.gen2 import gen3, Gen3ButlerWrapper
 
 from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
 

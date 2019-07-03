@@ -32,7 +32,7 @@ from lsst.daf.butler import Butler as Butler3, DatasetType
 from lsst.pipe.base.shims import ShimButler
 
 
-REPO_ROOT = os.path.join(getPackageDir("ci_hsc"), "DATA")
+REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 TESTDIR = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -145,7 +145,8 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
             Butler3.makeRepo(root)
             butler3 = Butler3(root, run="three")
             butler3.registry.registerDatasetType(
-                DatasetType("cat", ["label"], "SourceCatalog")
+                DatasetType("cat", ["label"], "SourceCatalog",
+                            universe=butler3.registry.dimensions)
             )
             butlerShim = ShimButler(butler3)
             catIn = SourceCatalog(SourceCatalog.Table.makeMinimalSchema())

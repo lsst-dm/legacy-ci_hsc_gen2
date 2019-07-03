@@ -1,2 +1,2 @@
-from .validate import *
-from .gen3 import Gen3ButlerWrapper
+import pkgutil, lsstimport
+__path__ = pkgutil.extend_path(__path__, __name__)

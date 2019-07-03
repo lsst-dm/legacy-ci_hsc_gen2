@@ -1,12 +1,12 @@
 import unittest
 
 import lsst.utils.tests
-import lsst.ci.hsc.validate
+import lsst.ci.hsc.gen2.validate
 
 
 class ImportTest(unittest.TestCase):
     def testImport(self):
-        self.assertTrue(hasattr(lsst.ci.hsc.validate, "RawValidation"))
+        self.assertTrue(hasattr(lsst.ci.hsc.gen2.validate, "RawValidation"))
 
 
 class TestMemory(lsst.utils.tests.MemoryTestCase):
