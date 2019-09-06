@@ -174,7 +174,7 @@ class Data(Struct):
                        [getExecutable("meas_base", "forcedPhotCcd.py") + " " + PROC + " " +
                        self.id(tract=tract) + " " + STDARGS + " -C forcedPhotCcdConfig.py",
                        validate(ForcedPhotCcdValidation, DATADIR, dataId,
-                                gen3id=dict(tract=0, skymap="ci_hsc", **self.gen3id()))])
+                                gen3id=dict(tract=0, skymap="discrete/ci_hsc", **self.gen3id()))])
 
 
 allData = {"HSC-R": [Data(903334, 16),
@@ -253,7 +253,7 @@ transmissionCurves = env.Command(transmissionCurvesTarget, calib,
 # produced by it aren't clobbered by other commands in-flight.
 skymap = command("skymap", mapper,
                  [getExecutable("pipe_tasks", "makeSkyMap.py") + " " + PROC + " -C skymap.py " + STDARGS,
-                  validate(SkymapValidation, DATADIR, gen3id=dict(skymap="ci_hsc"))])
+                  validate(SkymapValidation, DATADIR, gen3id=dict(skymap="discrete/ci_hsc"))])
 
 # Add brightObjectMasks to the *rerun* dir, because their data IDs involve
 # the tracts and patches defined by the skymap.
@@ -296,7 +296,7 @@ def processSkyCorr(dataList):
 skyCorr = processSkyCorr(allData)
 
 patchDataId = dict(tract=0, patch="5,4")
-patchGen3id = dict(skymap="ci_hsc", tract=0, patch=69)
+patchGen3id = dict(skymap="discrete/ci_hsc", tract=0, patch=69)
 patchId = " ".join(("%s=%s" % (k, v) for k, v in patchDataId.items()))
 
 # Coadd construction
@@ -412,14 +412,14 @@ forcedPhotCcd = [data.forced(env, tract=0) for data in sum(allData.values(), [])
 gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
                        [forcedPhotCcd, forcedPhotCoadd],
                        [getExecutable("daf_butler", "makeButlerRepo.py") + " " + REPO,
-                        getExecutable("ci_hsc_gen2", "gen3.py") + " --verbose"])
+                        getExecutable("ci_hsc_gen2", "gen2to3.py") + " --verbose"])
 env.Alias("gen3repo", gen3repo)
 
 gen3repoValidate = [command("gen3repo-{}".format(k), [gen3repo], v) for k, v in gen3validateCmds.items()]
 env.Alias("gen3repo-validate", gen3repoValidate)
 
 tests = [command(f"test_{name}", [gen3repo], getExecutable("ci_hsc_gen2", f"test_{name}.py", "tests"))
-         for name in ("import", "butlerShims", "gen2convert")]
+         for name in ("import", "butlerShims", "gen2to3")]
 
 env.Alias("tests", tests)
 

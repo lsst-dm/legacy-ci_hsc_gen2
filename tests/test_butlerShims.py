@@ -56,7 +56,7 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
         self.dataId3a = dict(exposure=903334, detector=16, instrument="HSC")
         # a valid coadd data ID
         self.dataId2b = dict(tract=0, patch="5,4", filter="HSC-I")
-        self.dataId3b = dict(tract=0, patch=69, abstract_filter="i", skymap="ci_hsc")
+        self.dataId3b = dict(tract=0, patch=69, abstract_filter="i", skymap="discrete/ci_hsc")
         # a visit+detector data ID that doesn't exist in this repo
         self.dataId2c = dict(visit=1000, ccd=12)
         self.dataId3c = dict(visit=1000, detector=12, instrument="HSC")
@@ -145,14 +145,14 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
             Butler3.makeRepo(root)
             butler3 = Butler3(root, run="three")
             butler3.registry.registerDatasetType(
-                DatasetType("cat", ["label"], "SourceCatalog",
+                DatasetType("cat", ["htm7"], "SourceCatalog",
                             universe=butler3.registry.dimensions)
             )
             butlerShim = ShimButler(butler3)
             catIn = SourceCatalog(SourceCatalog.Table.makeMinimalSchema())
             catIn.addNew().set("id", 42)
-            butlerShim.put(catIn, "cat", label="four")
-            catOut = butlerShim.get("cat", label="four")
+            butlerShim.put(catIn, "cat", htm7=131072)
+            catOut = butlerShim.get("cat", htm7=131072)
             self.assertEqual(list(catIn["id"]), list(catOut["id"]))
             # Without this the temporary directory can not be removed
             # if on NFS because these objects have open SQLite registries.

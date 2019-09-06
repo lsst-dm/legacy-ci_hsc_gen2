@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This file is part of ci_hsc.
+# This file is part of ci_hsc_gen2.
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -23,21 +23,29 @@
 
 import logging
 import argparse
+import os
 
-import lsst.log
-from lsst.log import Log
-from lsst.ci.hsc.gen2 import gen3, Gen3ButlerWrapper
-
+from lsst.log import Log, LogHandler
+from lsst.utils import getPackageDir
+from lsst.obs.base.gen2to3 import ConvertRepoTask, ConvertRepoSkyMapConfig
 from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
+from lsst.ci.hsc.gen2.gen2to3 import makeButler, REPO_ROOT
 
 
 def main(config=None):
-    gen3wrapper = Gen3ButlerWrapper(config=config)
-    registry = gen3wrapper.getRegistry()
-    datastore = gen3wrapper.getDatastore(registry)
-    walker = gen3.walk()
-    gen3.write(walker, registry, datastore)
-    HyperSuprimeCam().writeCuratedCalibrations(gen3wrapper.getButler("calib"))
+    instrument = HyperSuprimeCam()
+    convertRepoConfig = ConvertRepoTask.ConfigClass()
+    instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, convertRepoConfig)
+    convertRepoConfig.skyMaps["discrete/ci_hsc"] = ConvertRepoSkyMapConfig()
+    convertRepoConfig.skyMaps["discrete/ci_hsc"].load(os.path.join(getPackageDir("ci_hsc_gen2"), "skymap.py"))
+    butler3 = makeButler(config)
+    convertRepoTask = ConvertRepoTask(config=convertRepoConfig, butler3=butler3)
+    convertRepoTask.run(
+        root=REPO_ROOT,
+        collections=["shared/ci_hsc"],
+        calibs={"CALIB": ["calib/hsc"]},
+        reruns={"rerun/ci_hsc": ["shared/ci_hsc"]},
+    )
 
 
 if __name__ == "__main__":
@@ -49,12 +57,12 @@ if __name__ == "__main__":
                         help="Path to a butler configuration file to be used instead of the default"
                              " ci_hsc configuration.")
     args = parser.parse_args()
-    log = Log.getLogger("lsst.daf.butler")
+    log = Log.getLogger("convertRepo")
     log.setLevel(args.logLevel)
 
     # Forward python logging to lsst logger
-    lgr = logging.getLogger("lsst.daf.butler")
+    lgr = logging.getLogger("convertRepo")
     lgr.setLevel(logging.INFO if args.logLevel == Log.INFO else logging.DEBUG)
-    lgr.addHandler(lsst.log.LogHandler())
+    lgr.addHandler(LogHandler())
 
     main(config=args.config)

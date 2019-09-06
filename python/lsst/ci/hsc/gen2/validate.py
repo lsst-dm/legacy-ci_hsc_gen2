@@ -116,8 +116,8 @@ class Validation(object):
     def butler(self):
         if not self._butler:
             if self.gen3:
-                from . import gen3
-                self._butler = gen3.Gen3ButlerWrapper().getButler(self.collection)
+                from .gen2to3 import makeButler
+                self._butler = makeButler(collection=self.collection)
             else:
                 self._butler = Butler(self.root)
         return self._butler
