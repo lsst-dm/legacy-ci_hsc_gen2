@@ -23,52 +23,21 @@
 
 import logging
 import argparse
-import os
 
-from lsst.log import Log, LogHandler
-from lsst.utils import getPackageDir
-from lsst.obs.base.gen3 import ConvertRepoTask, ConvertRepoSkyMapConfig, RepoConversionSpec
+import lsst.log
+from lsst.log import Log
+from lsst.ci.hsc.gen2 import gen3, Gen3ButlerWrapper
+
 from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
-from lsst.daf.butler import Butler, ButlerConfig, StorageClassFactory
-
-REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
-SEARCH_PATHS = [os.path.join(getPackageDir("ci_hsc_gen2"), "gen3config"), ]
-
-
-def makeButler(config=None, root=REPO_ROOT, collection="raw/hsc"):
-    if config is None:
-        config = REPO_ROOT
-    butlerConfig = ButlerConfig(config, searchPaths=SEARCH_PATHS)
-    # TODO: is the line below still needed?  Try removing it...
-    StorageClassFactory().addFromConfig(butlerConfig)
-    # Force the configuration directory to refer to the ci_hsc root
-    butlerConfig.configDir = root
-    return Butler(butlerConfig, run=collection)
 
 
 def main(config=None):
-    instrument = HyperSuprimeCam()
-    convertRepoConfig = ConvertRepoTask.ConfigClass()
-    instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, convertRepoConfig)
-    convertRepoConfig.skyMaps["discrete/ci_hsc"] = ConvertRepoSkyMapConfig()
-    convertRepoConfig.skyMaps["discrete/ci_hsc"].load(os.path.join(getPackageDir("ci_hsc_gen2"), "skymap.py"))
-    butler3 = makeButler(config)
-    convertRepoTask = ConvertRepoTask(config=convertRepoConfig, butler3=butler3)
-    convertRepoTask.run(
-        REPO_ROOT,
-        calibRepos=[
-            RepoConversionSpec(
-                root=os.path.join(REPO_ROOT, "CALIB"),
-                collection="calib/hsc",
-            )
-        ],
-        rerunRepos=[
-            RepoConversionSpec(
-                root=os.path.join(REPO_ROOT, "rerun", "ci_hsc"),
-                collection="shared/ci_hsc"
-            )
-        ],
-    )
+    gen3wrapper = Gen3ButlerWrapper(config=config)
+    registry = gen3wrapper.getRegistry()
+    datastore = gen3wrapper.getDatastore(registry)
+    walker = gen3.walk()
+    gen3.write(walker, registry, datastore)
+    HyperSuprimeCam().writeCuratedCalibrations(gen3wrapper.getButler("calib"))
 
 
 if __name__ == "__main__":
@@ -86,6 +55,6 @@ if __name__ == "__main__":
     # Forward python logging to lsst logger
     lgr = logging.getLogger("lsst.daf.butler")
     lgr.setLevel(logging.INFO if args.logLevel == Log.INFO else logging.DEBUG)
-    lgr.addHandler(LogHandler())
+    lgr.addHandler(lsst.log.LogHandler())
 
     main(config=args.config)
