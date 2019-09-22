@@ -4,7 +4,6 @@ import os
 from collections import defaultdict
 from lsst.pipe.base import Struct
 from lsst.sconsUtils.utils import libraryLoaderEnvironment
-from lsst.utils import getPackageDir
 from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmValidation,
                                        SkyCorrValidation, SkymapValidation, WarpValidation,
                                        CoaddValidation, DetectionValidation, MergeDetectionsValidation,
@@ -93,7 +92,7 @@ def getExecutable(package, script, directory=None):
         directory = "bin"
     return "{} python {} {}".format(libraryLoaderEnvironment(),
                                     getProfiling(script),
-                                    os.path.join(getPackageDir(package), directory, script))
+                                    os.path.join(env.ProductDir(package), directory, script))
 
 
 Execute(Mkdir(".scons"))
