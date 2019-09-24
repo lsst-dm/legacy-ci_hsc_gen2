@@ -26,8 +26,7 @@ import lsst.utils.tests
 import lsst.afw.image.testUtils  # noqa; injects test methods into TestCase
 import lsst.meas.algorithms
 from lsst.utils import getPackageDir
-from lsst.daf.butler import Butler, DataId
-from lsst.daf.butler.sql import SingleDatasetQueryBuilder
+from lsst.daf.butler import Butler, DataCoordinate
 from lsst.daf.persistence import Butler as Butler2
 from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
 from lsst.pipe.tasks.objectMasks import ObjectMaskCatalog
@@ -44,33 +43,6 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
     def tearDown(self):
         del self.butler
 
-    def testImpliedDimensions(self):
-        """Test that implied dimensions are expanded properly when populating
-        the Dataset table.
-        """
-        # All of the dataset types below have Visit or Exposure in their
-        # dimensions, which means PhysicalFilter and AbstractFilter are
-        # implied. dimensions for them.  Those should be non-null and
-        # consistent.
-        sql = """
-            SELECT physical_filter, abstract_filter
-            FROM dataset
-            WHERE dataset_type_name IN (
-                'raw', 'calexp', 'icExp', 'src', 'icSrc',
-                'deepCoadd_directWarp', 'deepCoadd_psfMatchedWarp'
-            )
-            """
-        count = 0
-        for row in self.butler.registry.query(sql):
-            if row["physical_filter"] == "HSC-R":
-                self.assertEqual(row["abstract_filter"], "r")
-            elif row["physical_filter"] == "HSC-I":
-                self.assertEqual(row["abstract_filter"], "i")
-            else:
-                self.fail("physical_filter not in ('HSC-R', 'HSC-I')")
-            count += 1
-        self.assertGreater(count, 0)
-
     def testObservationPacking(self):
         """Test that packing Visit+Detector into an integer in Gen3 generates
         the same results as in Gen2.
@@ -79,8 +51,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         for visit, detector in [(903334, 16), (903338, 25), (903986, 100)]:
             dataId2 = {"visit": visit, "ccd": detector}
             dataId3 = self.butler.registry.expandDataId(visit=visit, detector=detector, instrument="HSC")
-            self.assertEqual(butler2.get("ccdExposureId", dataId2),
-                             self.butler.registry.packDataId("visit_detector", dataId3))
+            self.assertEqual(butler2.get("ccdExposureId", dataId2), dataId3.pack("visit_detector"))
 
     def testSkyMapPacking(self):
         """Test that packing Tract+Patch into an integer in Gen3 works and is
@@ -96,13 +67,13 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         # what we care about here is that the converted repo has the necessary
         # metadata to construct and use these packers at all.
         for patch in [0, 43, 52]:
-            dataId = self.butler.registry.expandDataId(skymap="ci_hsc", tract=0, patch=patch,
+            dataId = self.butler.registry.expandDataId(skymap="discrete/ci_hsc", tract=0, patch=patch,
                                                        abstract_filter='r')
-            packer1 = self.butler.registry.makeDataIdPacker("tract_patch", dataId)
-            packer2 = self.butler.registry.makeDataIdPacker("tract_patch_abstract_filter", dataId)
+            packer1 = self.butler.registry.dimensions.makePacker("tract_patch", dataId)
+            packer2 = self.butler.registry.dimensions.makePacker("tract_patch_abstract_filter", dataId)
             self.assertNotEqual(packer1.pack(dataId), packer2.pack(dataId))
             self.assertEqual(packer1.unpack(packer1.pack(dataId)),
-                             DataId(dataId, dimensions=packer1.dimensions.required))
+                             DataCoordinate.standardize(dataId, graph=packer1.dimensions))
             self.assertEqual(packer2.unpack(packer2.pack(dataId)), dataId)
             self.assertEqual(packer1.pack(dataId, abstract_filter='i'), packer1.pack(dataId))
             self.assertNotEqual(packer2.pack(dataId, abstract_filter='i'), packer2.pack(dataId))
@@ -125,61 +96,52 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         added to the Gen3 registry.
         """
         rawDatasetType = self.butler.registry.getDatasetType("raw")
-        butler = Butler(REPO_ROOT, run="calib")
-        rawQueryBuilder = SingleDatasetQueryBuilder.fromSingleCollection(
-            self.butler.registry,
-            rawDatasetType,
-            collection="raw"
-        )
+        calibButler = Butler(REPO_ROOT, run="calib/hsc")
         cameraRef = None
         bfKernelRef = None
-        rawRefs = list(rawQueryBuilder.execute(expandDataId=True))
+        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["raw/hsc"]))
+        self.assertEqual(len(rawRefs), 33)
         for rawRef in rawRefs:
             # Expand raw data ID to include implied dimensions (e.g.
             # physical_filter from exposure).
-            rawDataId = DataId(rawRef.dataId, dimensions=rawDatasetType.dimensions.implied(only=False))
             for calibDatasetTypeName in ("camera", "bfKernel", "defects"):
-                calibDatasetType = self.butler.registry.getDatasetType(calibDatasetTypeName)
-                calibQueryBuilder = SingleDatasetQueryBuilder.fromSingleCollection(
-                    self.butler.registry,
-                    calibDatasetType,
-                    collection="calib"
-                )
-                calibQueryBuilder.relateDimensions(rawDataId.dimensions())
-                calibQueryBuilder.whereDataId(rawDataId)
-                calibRefs = list(calibQueryBuilder.execute())
-                # We should have exactly one calib of each type for each raw.
-                self.assertEqual(len(calibRefs), 1)
+                with self.subTest(dataset=calibDatasetTypeName):
+                    calibDatasetType = self.butler.registry.getDatasetType(calibDatasetTypeName)
+                    calibRefs = list(self.butler.registry.queryDatasets(calibDatasetType,
+                                                                        collections=["calib/hsc"],
+                                                                        dataId=rawRef.dataId))
+                    # We should have exactly one calib of each type
+                    self.assertEqual(len(calibRefs), 1)
 
-                # Try getting those calibs to make sure the files themselves
-                # are where the Butler thinks they are.
-                # We defer that for camera and bfKernel, because there's only
-                # one of each of those.
-                if calibDatasetTypeName == "camera":
-                    if cameraRef is None:
-                        cameraRef = calibRefs[0]
+                    # Try getting those calibs to make sure the files
+                    # themselves are where the Butler thinks they are.  We
+                    # defer that for camera and bfKernel, because there's only
+                    # one of each of those.
+                    if calibDatasetTypeName == "camera":
+                        if cameraRef is None:
+                            cameraRef = calibRefs[0]
+                        else:
+                            self.assertEqual(cameraRef, calibRefs[0])
+                    elif calibDatasetTypeName == "bfKernel":
+                        if bfKernelRef is None:
+                            bfKernelRef = calibRefs[0]
+                        else:
+                            self.assertEqual(bfKernelRef, calibRefs[0])
                     else:
-                        self.assertEqual(cameraRef, calibRefs[0])
-                elif calibDatasetTypeName == "bfKernel":
-                    if bfKernelRef is None:
-                        bfKernelRef = calibRefs[0]
-                    else:
-                        self.assertEqual(bfKernelRef, calibRefs[0])
-                else:
-                    defects = butler.get(calibRefs[0])
-                    self.assertIsInstance(defects, lsst.meas.algorithms.Defects)
+                        defects = calibButler.get(calibRefs[0])
+                        self.assertIsInstance(defects, lsst.meas.algorithms.Defects)
 
         instrument = HyperSuprimeCam()
-        cameraFromButler = butler.get(cameraRef)
+        cameraFromButler = calibButler.get(cameraRef)
         cameraFromInstrument = instrument.getCamera()
         self.assertEqual(len(cameraFromButler), len(cameraFromInstrument))
         self.assertEqual(cameraFromButler.getName(), cameraFromInstrument.getName())
-        self.assertFloatsEqual(butler.get(bfKernelRef), instrument.getBrighterFatterKernel())
+        self.assertFloatsEqual(calibButler.get(bfKernelRef), instrument.getBrighterFatterKernel())
 
     def testBrightObjectMasks(self):
         """Test that bright object masks are included in the Gen3 repo.
         """
-        regions = self.butler.get("brightObjectMask", skymap='ci_hsc', tract=0, patch=69,
+        regions = self.butler.get("brightObjectMask", skymap='discrete/ci_hsc', tract=0, patch=69,
                                   abstract_filter='r')
         self.assertIsInstance(regions, ObjectMaskCatalog)
         self.assertGreater(len(regions), 0)
