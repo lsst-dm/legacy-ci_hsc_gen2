@@ -9,7 +9,9 @@ from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmVali
                                        CoaddValidation, DetectionValidation, MergeDetectionsValidation,
                                        MeasureValidation, MergeMeasurementsValidation,
                                        ForcedPhotCoaddValidation, ForcedPhotCcdValidation,
-                                       VersionValidation, DeblendSourcesValidation)
+                                       VersionValidation, DeblendSourcesValidation,
+                                       WriteObjectValidation, TransformObjectValidation,
+                                       ConsolidateObjectValidation)
 
 from SCons.Script import SConscript
 SConscript(os.path.join(".", "bin.src", "SConscript"))  # build bin scripts
@@ -407,9 +409,27 @@ preForcedPhotCcd = command("forcedPhotCcd", [mapper, mergeMeasurements],
 
 forcedPhotCcd = [data.forced(env, tract=0) for data in sum(allData.values(), [])]
 
+# post-processing
+writeObjectTable = command("writeObjectTable", [forcedPhotCoadd],
+                           [getExecutable("pipe_tasks", "writeObjectTable.py") + " " + PROC +
+                            " --id " + patchId + " filter=" + "^".join(filterList) + " " + STDARGS,
+                            validate(WriteObjectValidation, DATADIR, patchDataId, gen3id=patchGen3id)])
+
+transformObjectCatalog = command("transformObjectCatalog", [writeObjectTable],
+                                 [getExecutable("pipe_tasks", "transformObjectCatalog.py") + " " + PROC +
+                                  " --id " + patchId + " " + STDARGS,
+                                  validate(TransformObjectValidation, DATADIR, patchDataId,
+                                           gen3id=patchGen3id)])
+
+consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatalog],
+                                 [getExecutable("pipe_tasks", "consolidateObjectTable.py") + " " + PROC +
+                                  " --id " + patchId + " " + STDARGS,
+                                  validate(ConsolidateObjectValidation, DATADIR, patchDataId,
+                                           gen3id=patchGen3id)])
+
 
 gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
-                       [forcedPhotCcd, forcedPhotCoadd],
+                       [forcedPhotCcd, consolidateObjectTable],
                        [getExecutable("daf_butler", "makeButlerRepo.py") + " " + REPO,
                         getExecutable("ci_hsc_gen2", "gen2to3.py") + " --verbose"])
 env.Alias("gen3repo", gen3repo)
