@@ -22,7 +22,8 @@
 __all__ = ["RawValidation", "DetrendValidation", "SfmValidation", "SkyCorrValidation", "SkymapValidation",
            "WarpValidation", "CoaddValidation", "DetectionValidation", "MergeDetectionsValidation",
            "MeasureValidation", "MergeMeasurementsValidation", "ForcedPhotCoaddValidation",
-           "ForcedPhotCcdValidation", "VersionValidation", "DeblendSourcesValidation"]
+           "ForcedPhotCcdValidation", "VersionValidation", "DeblendSourcesValidation",
+           "WriteObjectValidation", "TransformObjectValidation", "ConsolidateObjectValidation"]
 
 import os
 import numpy
@@ -394,6 +395,18 @@ class ForcedPhotCcdValidation(Validation):
     _datasets = ["forcedPhotCcd_config", "forcedPhotCcd_metadata",
                  "forced_src", "forced_src_schema"]
     _sourceDataset = "forced_src"
+
+
+class WriteObjectValidation(Validation):
+    _datasets = ["writeObjectTable_config", "deepCoadd_obj"]
+
+
+class TransformObjectValidation(Validation):
+    _datasets = ["transformObjectCatalog_config", "objectTable"]
+
+
+class ConsolidateObjectValidation(Validation):
+    _datasets = ["consolidateObjectTable_config", "objectTable_tract"]
 
 
 class VersionValidation(Validation):
