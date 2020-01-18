@@ -38,6 +38,7 @@ def main(config=None):
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, convertRepoConfig)
     convertRepoConfig.skyMaps["discrete/ci_hsc"] = ConvertRepoSkyMapConfig()
     convertRepoConfig.skyMaps["discrete/ci_hsc"].load(os.path.join(getPackageDir("ci_hsc_gen2"), "skymap.py"))
+    convertRepoConfig.rootSkyMapName = "discrete/ci_hsc"
     butler3 = makeButler(config)
     convertRepoTask = ConvertRepoTask(config=convertRepoConfig, butler3=butler3)
     convertRepoTask.run(
