@@ -313,7 +313,7 @@ patchId = " ".join(("%s=%s" % (k, v) for k, v in patchDataId.items()))
 # schema/config/versions
 preWarp = command("warp", skymap,
                   getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + STDARGS +
-                  " -c doApplyUberCal=False ")
+                  " -c doApplyExternalPhotoCalib=False -c doApplyExternalSkyWcs=False")
 preCoadd = command("coadd", [skymap, brightObj],
                    getExecutable("pipe_tasks", "assembleCoadd.py") + " --warpCompareCoadd  " +
                    PROC + " " + STDARGS)
@@ -331,7 +331,7 @@ def processCoadds(filterName, dataList):
                      [skymap, preWarp] + [skyCorr[exp]],
                      [getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + ident +
                       " " + " ".join(data.id("--selectId") for data in exposures[exp]) + " " + STDARGS +
-                      " -c doApplyUberCal=False",
+                      " -c doApplyExternalPhotoCalib=False -c doApplyExternalSkyWcs=False",
                       validate(WarpValidation, DATADIR, patchDataId, visit=exp, filter=filterName,
                                gen3id=dict(instrument="HSC", visit=exp, **patchGen3id))
                       ]) for exp in exposures]
