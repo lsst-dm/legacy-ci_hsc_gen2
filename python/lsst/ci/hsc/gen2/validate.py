@@ -28,6 +28,7 @@ __all__ = ["RawValidation", "DetrendValidation", "SfmValidation", "SkyCorrValida
 import os
 import numpy
 import argparse
+import yaml
 from lsst.base import setNumThreads
 from lsst.daf.persistence import Butler
 import lsst.log
@@ -39,6 +40,14 @@ from lsst.meas.algorithms import LoadIndexedReferenceObjectsTask
 # code itself.  This is DM-16829, and this workaround should be removed once
 # that ticket has been addressed.
 import lsst.obs.subaru  # noqa
+
+# TODO : Workaround for DM-22256. Remove this try block.
+try:
+    import pyarrow  # noqa: F401
+    import pyarrow.parquet  # noqa: F401
+    from lsst.pipe.tasks.parquetTable import ParquetTable
+except ImportError:
+    pass
 
 
 class IdValueAction(argparse.Action):
@@ -70,6 +79,8 @@ def main():
     parser.add_argument("--collection", default=None, help="Collection name (Gen3 only)")
     parser.add_argument("--id", nargs="*", action=IdValueAction, default=[],
                         help="Data identifier, e.g., visit=123 ccd=45", metavar="KEY=VALUE")
+    parser.add_argument("--filepath", default=None, help="Load a file with expected values to "
+                        "validate with (e.g. an expected catalog schema")
     args = parser.parse_args()
 
     if not args.cls.endswith("Validation") or args.cls not in globals():
@@ -80,7 +91,7 @@ def main():
         if not args.gen3:
             root = os.path.join(root, "rerun", args.rerun)
 
-    validator = globals()[args.cls](root, collection=args.collection, gen3=args.gen3)
+    validator = globals()[args.cls](root, collection=args.collection, gen3=args.gen3, filepath=args.filepath)
     if args.id:
         intKeys = ["visit", "ccd", "tract"]
         if args.gen3:
@@ -104,13 +115,14 @@ class Validation(object):
     _minMatches = 10  # Minimum number of matches
     _butler = {}
 
-    def __init__(self, root, log=None, gen3=False, collection=None):
+    def __init__(self, root, log=None, gen3=False, collection=None, filepath=None):
         if log is None:
             log = lsst.log.Log.getDefaultLogger()
         self.log = log
         self.root = root
         self.gen3 = gen3
         self.collection = collection
+        self.filepath = filepath
         self._butler = None
 
     @property
@@ -403,6 +415,29 @@ class WriteObjectValidation(Validation):
 
 class TransformObjectValidation(Validation):
     _datasets = ["transformObjectCatalog_config", "objectTable"]
+
+    def run(self, dataId, **kwargs):
+        Validation.run(self, dataId, **kwargs)
+
+        self.log.info("Validating objectTable schema to match the schema in %s", self.filepath)
+        with open(self.filepath, 'r') as f:
+            hscSchema = yaml.safe_load(f)['tables']
+
+        objectSchema = [table for table in hscSchema if table['name'] == 'Object']
+        self.assertEqual("There should be just one Object table in the ddl", len(objectSchema), 1)
+        expectedColumnNames = set(column['name'] for column in objectSchema[0]['columns'])
+
+        objectTable = self.butler.get('objectTable', dataId)
+        # The type of objectTable is lsst.pipe.tasks.parquetTable.ParquetTable
+        # in Gen2, but is pandas.DataFrame in Gen3.
+        if isinstance(objectTable, ParquetTable):
+            df = objectTable.toDataFrame()
+        else:
+            df = objectTable
+
+        objectColumnNames = set(df.columns.to_list())
+        self.assertEqual("The schema matches the ddl in cat yaml",
+                         objectColumnNames, expectedColumnNames)
 
 
 class ConsolidateObjectValidation(Validation):

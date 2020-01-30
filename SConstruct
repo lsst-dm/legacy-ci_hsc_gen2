@@ -4,6 +4,7 @@ import os
 from collections import defaultdict
 from lsst.pipe.base import Struct
 from lsst.sconsUtils.utils import libraryLoaderEnvironment
+from lsst.utils import getPackageDir
 from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmValidation,
                                        SkyCorrValidation, SkymapValidation, WarpValidation,
                                        CoaddValidation, DetectionValidation, MergeDetectionsValidation,
@@ -30,13 +31,14 @@ env["ENV"]["OMP_NUM_THREADS"] = "1"  # Disable threading; we're parallelising at
 gen3validateCmds = {}
 
 
-def validate(cls, root, dataId=None, gen3id=None, **kwargs):
+def validate(cls, root, dataId=None, gen3id=None, filepath=None, **kwargs):
     """!Construct a command-line for validation
 
     @param cls  Validation class to use
     @param root  Data repo root directory
     @param dataId  Data identifier dict (Gen2), or None
     @param gen3Id  Gen3 data identifier dict, or None
+    @param filepath  an input file containing expected values to validate with
     @param kwargs  Additional key/value pairs to add to dataId
     @return Command-line string to run validation
     """
@@ -46,6 +48,8 @@ def validate(cls, root, dataId=None, gen3id=None, **kwargs):
     elif kwargs:
         dataId = kwargs
     cmd = [getExecutable("ci_hsc_gen2", "validate.py"), cls.__name__, root]
+    if filepath:
+        cmd += ["--filepath", filepath]
     gen3 = cmd + ["--gen3", "--collection", "shared/ci_hsc"]
     if dataId:
         cmd += ["--id %s" % (" ".join("%s=%s" % (key, value) for key, value in dataId.items()))]
@@ -428,11 +432,12 @@ writeObjectTable = command("writeObjectTable", [forcedPhotCoadd],
                             " --id " + patchId + " filter=" + "^".join(filterList) + " " + STDARGS,
                             validate(WriteObjectValidation, DATADIR, patchDataId, gen3id=patchGen3id)])
 
+catSchema = os.path.join(getPackageDir("cat"), 'yml', 'hsc.yaml')
 transformObjectCatalog = command("transformObjectCatalog", [writeObjectTable],
                                  [getExecutable("pipe_tasks", "transformObjectCatalog.py") + " " + PROC +
                                   " --id " + patchId + " " + STDARGS,
                                   validate(TransformObjectValidation, DATADIR, patchDataId,
-                                           gen3id=patchGen3id)])
+                                           gen3id=patchGen3id, filepath=catSchema)])
 
 consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatalog],
                                  [getExecutable("pipe_tasks", "consolidateObjectTable.py") + " " + PROC +
