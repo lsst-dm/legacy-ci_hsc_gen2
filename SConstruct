@@ -223,7 +223,8 @@ allData = {"HSC-R": [Data(903334, 16),
                      ],
            }
 # Link against existing data
-links = env.Command(["CALIB", "raw", "brightObjectMasks", "ps1_pv3_3pi_20170110"], [], ["bin/linker.sh"])
+links = env.Command(["CALIB", "raw", "brightObjectMasks", "ps1_pv3_3pi_20170110", "jointcal"], [],
+                    ["bin/linker.sh"])
 
 # Set up the data repository
 mapper = env.Command(os.path.join(REPO, "_mapper"), ["bin", links],
@@ -245,6 +246,12 @@ ingestValidations = [command("ingestValidation-%(visit)d-%(ccd)d" % data.dataId,
 calibValidations = [command("calibValidation-%(visit)d-%(ccd)d" % data.dataId, ingest,
                             validate(DetrendValidation, REPO, data.dataId)) for
                     data in sum(allData.values(), [])]
+
+installExternalData = command("installExternalData", [ingest, links],
+                              [getExecutable("ci_hsc_gen2", "installExternalData.py") +
+                               f" jointcal {REPO} --tract 0 " +
+                               " ".join(f"--visitCcd {dd.visit} {dd.ccd}" for
+                                        dd in sum(allData.values(), []))])
 
 refcatName = "ps1_pv3_3pi_20170110"
 refcatPath = os.path.join(REPO, "ref_cats", refcatName)
@@ -311,7 +318,7 @@ patchId = " ".join(("%s=%s" % (k, v) for k, v in patchDataId.items()))
 # Coadd construction
 # preWarp, preCoadd and preDetect steps are a work-around for a race on
 # schema/config/versions
-preWarp = command("warp", skymap,
+preWarp = command("warp", [skymap, installExternalData],
                   getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + STDARGS +
                   " -c doApplyExternalPhotoCalib=False -c doApplyExternalSkyWcs=False")
 preCoadd = command("coadd", [skymap, brightObj],
@@ -411,7 +418,7 @@ def forcedPhotCoadd(filterName):
 forcedPhotCoadd = [forcedPhotCoadd(ff) for ff in filterList]
 
 # preForcedPhotCcd step is a work-around for a race on schema/config/versions
-preForcedPhotCcd = command("forcedPhotCcd", [mapper, mergeMeasurements],
+preForcedPhotCcd = command("forcedPhotCcd", [mapper, mergeMeasurements, installExternalData],
                            getExecutable("meas_base", "forcedPhotCcd.py") + " " + PROC +
                            " -C forcedPhotCcdConfig.py" + " " + STDARGS)
 
