@@ -36,6 +36,7 @@ def main(config=None):
     instrument = HyperSuprimeCam()
     convertRepoConfig = ConvertRepoTask.ConfigClass()
     instrument.applyConfigOverrides(ConvertRepoTask._DefaultName, convertRepoConfig)
+    convertRepoConfig.storageClasses["jointcal_wcs"] = "Wcs"
     convertRepoConfig.skyMaps["discrete/ci_hsc"] = ConvertRepoSkyMapConfig()
     convertRepoConfig.skyMaps["discrete/ci_hsc"].load(os.path.join(getPackageDir("ci_hsc_gen2"), "skymap.py"))
     convertRepoConfig.rootSkyMapName = "discrete/ci_hsc"
