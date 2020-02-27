@@ -41,7 +41,7 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.butler2 = Butler2(os.path.join(REPO_ROOT, "rerun", "ci_hsc"))
-        cls.butler3 = Butler3(REPO_ROOT, run="shared/ci_hsc")
+        cls.butler3 = Butler3(REPO_ROOT, collections="shared/ci_hsc")
         cls.butlerShim = ShimButler(cls.butler3)
 
     @classmethod

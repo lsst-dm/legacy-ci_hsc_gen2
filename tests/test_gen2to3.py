@@ -38,7 +38,7 @@ REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
 
     def setUp(self):
-        self.butler = Butler(REPO_ROOT, run="shared/ci_hsc")
+        self.butler = Butler(REPO_ROOT, collections="shared/ci_hsc")
 
     def tearDown(self):
         del self.butler
