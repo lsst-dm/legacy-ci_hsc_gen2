@@ -33,15 +33,23 @@ from lsst.pipe.tasks.objectMasks import ObjectMaskCatalog
 
 
 REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
+GEN3_REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATAgen3")
 
 
 class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
 
     def setUp(self):
-        self.butler = Butler(REPO_ROOT, collections="shared/ci_hsc")
+        self.butler = Butler(GEN3_REPO_ROOT, collections="shared/HSC")
 
     def tearDown(self):
         del self.butler
+
+    def testCollections(self):
+        """Test that only the correct set of collections is created.
+        """
+        expected = {'refcats', 'raw/HSC', 'calib/HSC', 'shared/HSC', 'shared/HSC/rerun/ci_hsc'}
+        collections = set(self.butler.registry.queryCollections())
+        self.assertEqual(collections, expected)
 
     def testObservationPacking(self):
         """Test that packing Visit+Detector into an integer in Gen3 generates
@@ -96,10 +104,10 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         added to the Gen3 registry.
         """
         rawDatasetType = self.butler.registry.getDatasetType("raw")
-        calibButler = Butler(REPO_ROOT, run="calib/hsc")
+        calibButler = Butler(GEN3_REPO_ROOT, run="calib/HSC")
         cameraRef = None
         bfKernelRef = None
-        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["raw/hsc"]))
+        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["raw/HSC"]))
         self.assertEqual(len(rawRefs), 33)
         for rawRef in rawRefs:
             # Expand raw data ID to include implied dimensions (e.g.
@@ -108,7 +116,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
                 with self.subTest(dataset=calibDatasetTypeName):
                     calibDatasetType = self.butler.registry.getDatasetType(calibDatasetTypeName)
                     calibRefs = list(self.butler.registry.queryDatasets(calibDatasetType,
-                                                                        collections=["calib/hsc"],
+                                                                        collections=["calib/HSC"],
                                                                         dataId=rawRef.dataId))
                     # We should have exactly one calib of each type
                     self.assertEqual(len(calibRefs), 1)

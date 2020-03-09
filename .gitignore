@@ -3,6 +3,7 @@
 config.log
 .scons
 DATA
+DATAgen3
 *.pyc
 bin/*.py
 .cache

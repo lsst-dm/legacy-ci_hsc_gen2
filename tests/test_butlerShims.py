@@ -33,6 +33,7 @@ from lsst.pipe.base.shims import ShimButler
 
 
 REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
+GEN3_REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATAgen3")
 TESTDIR = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -41,7 +42,7 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.butler2 = Butler2(os.path.join(REPO_ROOT, "rerun", "ci_hsc"))
-        cls.butler3 = Butler3(REPO_ROOT, collections="shared/ci_hsc")
+        cls.butler3 = Butler3(GEN3_REPO_ROOT, collections="shared/HSC")
         cls.butlerShim = ShimButler(cls.butler3)
 
     @classmethod
