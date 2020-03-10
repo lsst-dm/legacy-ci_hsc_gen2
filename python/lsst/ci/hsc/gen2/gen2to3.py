@@ -27,6 +27,8 @@ import os
 
 from lsst.utils import getPackageDir
 from lsst.daf.butler import Butler, ButlerConfig
+from lsst.obs.base.gen2to3 import Translator, ConstantKeyHandler, CopyKeyHandler
+
 
 REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATA")
 SEARCH_PATHS = [os.path.join(getPackageDir("ci_hsc_gen2"), "gen3config"), ]
@@ -39,3 +41,29 @@ def makeButler(config=None, root=REPO_ROOT, collection="raw/hsc"):
     # Force the configuration directory to refer to the ci_hsc root
     butlerConfig.configDir = root
     return Butler(butlerConfig, run=collection)
+
+
+# Add instrument to Gen3 data ID if Gen2 contains "visit" or "ccd".
+# Both rules will match so we'll actually set instrument in the same dict twice
+Translator.addRule(ConstantKeyHandler("instrument", "HSC"),
+                   instrument="HSC", gen2keys=("visit",), consume=False)
+Translator.addRule(ConstantKeyHandler("instrument", "HSC"),
+                   instrument="HSC", gen2keys=("ccd",), consume=False)
+
+# Copy Gen2 'visit' to Gen3 'exposure' for raw only.  Also consume filter,
+# since that's implied by 'exposure' in Gen3.
+Translator.addRule(CopyKeyHandler("exposure", "visit"),
+                   instrument="HSC", datasetTypeName="raw", gen2keys=("visit",),
+                   consume=("visit", "filter"))
+
+# Copy Gen2 'visit' to Gen3 'visit' otherwise.  Also consume filter.
+Translator.addRule(CopyKeyHandler("visit"), instrument="HSC", gen2keys=("visit",),
+                   consume=("visit", "filter"))
+
+# Copy Gen2 'ccd' to Gen3 'detector;
+Translator.addRule(CopyKeyHandler("detector", "ccd"), instrument="HSC", gen2keys=("ccd",))
+
+# Add calibration mapping for filter for filter dependent types
+for calibType in ('flat', 'sky', 'fringe'):
+    Translator.addRule(CopyKeyHandler("physical_filter", "filter"),
+                       instrument="HSC", datasetTypeName=calibType)
