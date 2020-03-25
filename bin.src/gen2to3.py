@@ -27,7 +27,7 @@ import os
 
 from lsst.log import Log, LogHandler
 from lsst.utils import getPackageDir
-from lsst.obs.base.gen2to3 import ConvertRepoTask, ConvertRepoSkyMapConfig
+from lsst.obs.base.gen2to3 import ConvertRepoTask, ConvertRepoSkyMapConfig, Rerun
 from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
 from lsst.ci.hsc.gen2.gen2to3 import makeButler, REPO_ROOT
 
@@ -39,13 +39,15 @@ def main(config=None):
     convertRepoConfig.skyMaps["discrete/ci_hsc"] = ConvertRepoSkyMapConfig()
     convertRepoConfig.skyMaps["discrete/ci_hsc"].load(os.path.join(getPackageDir("ci_hsc_gen2"), "skymap.py"))
     convertRepoConfig.rootSkyMapName = "discrete/ci_hsc"
+    convertRepoConfig.runs["jointcal_photoCalib"] = "preprocessed/jointcal"
+    convertRepoConfig.runs["jointcal_wcs"] = "preprocessed/jointcal"
     butler3 = makeButler(config)
     convertRepoTask = ConvertRepoTask(config=convertRepoConfig, butler3=butler3)
     convertRepoTask.run(
         root=REPO_ROOT,
-        collections=["shared/ci_hsc"],
-        calibs={"CALIB": ["calib/hsc"]},
-        reruns={"rerun/ci_hsc": ["shared/ci_hsc"]},
+        calibs={"CALIB": "calib/hsc"},
+        reruns=[Rerun(path="rerun/ci_hsc", runName="shared/ci_hsc/direct", chainName="shared/ci_hsc",
+                      parents=[])],
     )
 
 
