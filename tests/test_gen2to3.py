@@ -28,7 +28,7 @@ import lsst.meas.algorithms
 from lsst.utils import getPackageDir
 from lsst.daf.butler import Butler, DataCoordinate
 from lsst.daf.persistence import Butler as Butler2
-from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
+from lsst.obs.subaru import HyperSuprimeCam
 from lsst.pipe.tasks.objectMasks import ObjectMaskCatalog
 
 

@@ -28,7 +28,7 @@ import os
 from lsst.log import Log, LogHandler
 from lsst.utils import getPackageDir
 from lsst.obs.base.gen2to3 import ConvertRepoTask, ConvertRepoSkyMapConfig, Rerun
-from lsst.obs.subaru.gen3.hsc import HyperSuprimeCam
+from lsst.obs.subaru import HyperSuprimeCam
 from lsst.ci.hsc.gen2.gen2to3 import makeButler, REPO_ROOT
 
 
