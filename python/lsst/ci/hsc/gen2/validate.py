@@ -31,8 +31,10 @@ import argparse
 import yaml
 from lsst.base import setNumThreads
 from lsst.daf.persistence import Butler
+import lsst.daf.butler
 import lsst.log
 from lsst.meas.algorithms import LoadIndexedReferenceObjectsTask
+from lsst.utils import getPackageDir
 
 # We need to import lsst.obs.subaru because it provides the
 # subaru_FilterFraction plugin that's referenced in some of the configs below,
@@ -129,8 +131,8 @@ class Validation(object):
     def butler(self):
         if not self._butler:
             if self.gen3:
-                from .gen2to3 import makeButler
-                self._butler = makeButler(collection=self.collection)
+                GEN3_REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATAgen3")
+                self._butler = lsst.daf.butler.Butler(GEN3_REPO_ROOT, collections=self.collection)
             else:
                 self._butler = Butler(self.root)
         return self._butler

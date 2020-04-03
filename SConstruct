@@ -50,7 +50,7 @@ def validate(cls, root, dataId=None, gen3id=None, filepath=None, **kwargs):
     cmd = [getExecutable("ci_hsc_gen2", "validate.py"), cls.__name__, root]
     if filepath:
         cmd += ["--filepath", filepath]
-    gen3 = cmd + ["--gen3", "--collection", "shared/ci_hsc"]
+    gen3 = cmd + ["--gen3", "--collection", "shared/HSC"]
     if dataId:
         cmd += ["--id %s" % (" ".join("%s=%s" % (key, value) for key, value in dataId.items()))]
     if gen3id:
@@ -91,10 +91,10 @@ def getProfiling(script):
 
 def getExecutable(package, script, directory=None):
     """
-    Given the name of a package and a script or other executable which lies
-    within the given subdirectory (defaults to "bin"), return an appropriate
-    string which can be used to set up an appropriate environment and execute
-    the command.
+    Given the name of a package and a script or other python executable which
+    lies within the given subdirectory (defaults to "bin"), return an
+    appropriate string which can be used to set up an appropriate environment
+    and execute the command.
 
     This includes:
     * Specifying an explict list of paths to be searched by the dynamic linker;
@@ -448,8 +448,7 @@ consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatal
 # TODO : Workaround for DM-22256. forcedPhotCoadd won't be needed.
 gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
                        [forcedPhotCcd, forcedPhotCoadd, consolidateObjectTable],
-                       [getExecutable("daf_butler", "makeButlerRepo.py") + " " + REPO,
-                        getExecutable("ci_hsc_gen2", "gen2to3.py") + " --verbose"])
+                       "bin/gen2to3.sh")
 env.Alias("gen3repo", gen3repo)
 
 # TODO : Workaround for DM-22256. Remove this if block.
@@ -480,4 +479,4 @@ env.Alias("install", "SConstruct")
 env.Alias("all", everything)
 Default(everything)
 
-env.Clean(everything, [".scons", "DATA/rerun/ci_hsc"] + [x for x in links] + ["DATA"])
+env.Clean(everything, [".scons", "DATA/rerun/ci_hsc"] + [x for x in links] + ["DATA", "DATAgen3"])

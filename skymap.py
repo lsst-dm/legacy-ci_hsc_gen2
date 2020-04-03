@@ -1,3 +1,4 @@
+# This file defines the `lsst.skymap.BaseSkyMap` type used by ci_hsc.
 config.skyMap["discrete"].projection = "TAN"
 config.skyMap["discrete"].raList = [320.36749197602893]
 config.skyMap["discrete"].decList = [0.3131554006070023]
