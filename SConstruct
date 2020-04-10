@@ -116,6 +116,7 @@ AddOption("--enable-profile", nargs="?", const="profile", dest="enable_profile",
 
 RAW = GetOption("raw")
 REPO = GetOption("repo")
+REPO_GEN3 = REPO + "gen3"
 CALIB = GetOption("calib")
 PROC = GetOption("repo") + " --rerun " + GetOption("rerun")  # Common processing arguments
 DATADIR = os.path.join(GetOption("repo"), "rerun", GetOption("rerun"))
@@ -437,7 +438,7 @@ consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatal
                                   validate(ConsolidateObjectValidation, DATADIR, patchDataId,
                                            gen3id=patchGen3id)])
 
-gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
+gen3repo = env.Command([os.path.join(REPO_GEN3, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
                        [forcedPhotCcd, consolidateObjectTable],
                        "bin/gen2to3.sh")
 env.Alias("gen3repo", gen3repo)
