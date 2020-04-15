@@ -14,14 +14,6 @@ from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmVali
                                        WriteObjectValidation, TransformObjectValidation,
                                        ConsolidateObjectValidation)
 
-# TODO : Workaround for DM-22256. Remove this try block.
-try:
-    import pyarrow  # noqa: F401
-    import pyarrow.parquet  # noqa: F401
-    havePyArrow = True
-except ImportError:
-    havePyArrow = False
-
 from SCons.Script import SConscript
 SConscript(os.path.join(".", "bin.src", "SConscript"))  # build bin scripts
 
@@ -445,21 +437,12 @@ consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatal
                                   validate(ConsolidateObjectValidation, DATADIR, patchDataId,
                                            gen3id=patchGen3id)])
 
-# TODO : Workaround for DM-22256. forcedPhotCoadd won't be needed.
 gen3repo = env.Command([os.path.join(REPO, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
-                       [forcedPhotCcd, forcedPhotCoadd, consolidateObjectTable],
+                       [forcedPhotCcd, consolidateObjectTable],
                        "bin/gen2to3.sh")
 env.Alias("gen3repo", gen3repo)
 
-# TODO : Workaround for DM-22256. Remove this if block.
-if not havePyArrow:
-    env.Ignore(gen3repo, consolidateObjectTable)
-
-    gen3repoValidate = [command("gen3repo-{}".format(k), [gen3repo], v) for k, v in gen3validateCmds.items()
-                        if k not in ["WriteObjectValidation", "TransformObjectValidation",
-                                     "ConsolidateObjectValidation"]]
-else:
-    gen3repoValidate = [command("gen3repo-{}".format(k), [gen3repo], v) for k, v in gen3validateCmds.items()]
+gen3repoValidate = [command("gen3repo-{}".format(k), [gen3repo], v) for k, v in gen3validateCmds.items()]
 env.Alias("gen3repo-validate", gen3repoValidate)
 
 tests = [command(f"test_{name}", [gen3repo], getExecutable("ci_hsc_gen2", f"test_{name}.py", "tests"))
