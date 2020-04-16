@@ -35,6 +35,7 @@ import lsst.daf.butler
 import lsst.log
 from lsst.meas.algorithms import LoadIndexedReferenceObjectsTask
 from lsst.utils import getPackageDir
+from lsst.pipe.tasks.parquetTable import ParquetTable
 
 # We need to import lsst.obs.subaru because it provides the
 # subaru_FilterFraction plugin that's referenced in some of the configs below,
@@ -42,14 +43,6 @@ from lsst.utils import getPackageDir
 # code itself.  This is DM-16829, and this workaround should be removed once
 # that ticket has been addressed.
 import lsst.obs.subaru  # noqa
-
-# TODO : Workaround for DM-22256. Remove this try block.
-try:
-    import pyarrow  # noqa: F401
-    import pyarrow.parquet  # noqa: F401
-    from lsst.pipe.tasks.parquetTable import ParquetTable
-except ImportError:
-    pass
 
 
 class IdValueAction(argparse.Action):
