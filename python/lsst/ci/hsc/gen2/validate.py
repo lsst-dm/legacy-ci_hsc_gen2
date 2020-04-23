@@ -332,8 +332,8 @@ class DetectionValidation(Validation):
         if self.gen3:  # TODO: implement metadata component access in Gen3 and enable this check.
             return
         md = self.butler.get("deepCoadd_calexp_md", dataId)
-        varScale = md.getScalar("variance_scale")
-        self.assertGreater("variance_scale is positive", varScale, 0.0)
+        varScale = md.getScalar("VARIANCE_SCALE")
+        self.assertGreater("VARIANCE_SCALE is positive", varScale, 0.0)
 
 
 class MergeDetectionsValidation(Validation):
