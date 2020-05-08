@@ -11,6 +11,8 @@ from lsst.ci.hsc.gen2.validate import (RawValidation, DetrendValidation, SfmVali
                                        MeasureValidation, MergeMeasurementsValidation,
                                        ForcedPhotCoaddValidation, ForcedPhotCcdValidation,
                                        VersionValidation, DeblendSourcesValidation,
+                                       WriteSourceValidation, TransformSourceValidation,
+                                       ConsolidateSourceValidation,
                                        WriteObjectValidation, TransformObjectValidation,
                                        ConsolidateObjectValidation)
 
@@ -172,6 +174,19 @@ class Data(Struct):
                         STDARGS + " -c charImage.doWriteExposure=True",
                         validate(SfmValidation, DATADIR, self.dataId, gen3id=self.gen3id())])
 
+    def writeSource(self, env):
+        return command("writeSource-" + self.name, [preWriteSource, sfm[(self.visit, self.ccd)]],
+                       [getExecutable("pipe_tasks", "writeSourceTable.py") +
+                        " " + PROC + " " + self.id() + " " + STDARGS,
+                        validate(WriteSourceValidation, DATADIR, self.dataId, gen3id=self.gen3id())])
+
+    def transformSource(self, env):
+        return command("transformSource-" + self.name,
+                       [preTransformSource, writeSource[(self.visit, self.ccd)]],
+                       [getExecutable("pipe_tasks", "transformSourceTable.py") +
+                        " " + PROC + " " + self.id() + " " + STDARGS,
+                        validate(TransformSourceValidation, DATADIR, self.dataId, gen3id=self.gen3id())])
+
     def forced(self, env, tract):
         """Process this data through CCD-level forced photometry"""
         dataId = self.dataId.copy()
@@ -285,14 +300,15 @@ preSfm = command("sfm", [skymap, transmissionCurvesTarget],
 env.Depends(preSfm, refcat)
 sfm = {(data.visit, data.ccd): data.sfm(env) for data in sum(allData.values(), [])}
 
+visitDataLists = defaultdict(list)
+for filterName in allData:
+    for data in allData[filterName]:
+        visitDataLists[data.visit].append(data)
+
 
 # Sky correction
-def processSkyCorr(dataList):
+def processSkyCorr(visitDataLists):
     """Generate sky corrections"""
-    visitDataLists = defaultdict(list)
-    for filterName in allData:
-        for data in allData[filterName]:
-            visitDataLists[data.visit].append(data)
     preSkyCorr = command("skyCorr", skymap,
                          getExecutable("pipe_drivers", "skyCorrection.py") + " " + PROC + " " + STDARGS +
                          " --batch-type=smp --cores=1")
@@ -306,7 +322,38 @@ def processSkyCorr(dataList):
             for vv, name, dep, cmd, val in zip(visitDataLists, nameList, depList, cmdList, validateList)}
 
 
-skyCorr = processSkyCorr(allData)
+skyCorr = processSkyCorr(visitDataLists)
+
+# a work-around for a race on config/versions
+preWriteSource = command("writeSource", preSfm,
+                         [getExecutable("pipe_tasks", "writeSourceTable.py") +
+                          " " + PROC + " " + STDARGS])
+preTransformSource = command("transformSource", preWriteSource,
+                             [getExecutable("pipe_tasks", "transformSourceTable.py") +
+                              " " + PROC + " " + STDARGS])
+preConsolidateSource = command("consolidateSource", preTransformSource,
+                               [getExecutable("pipe_tasks", "consolidateSourceTable.py") +
+                                " " + PROC + " " + STDARGS])
+
+writeSource = {(data.visit, data.ccd): data.writeSource(env) for data in sum(allData.values(), [])}
+transformSource = {(data.visit, data.ccd): data.transformSource(env) for data in sum(allData.values(), [])}
+
+
+def processConsolidateSource(visitDataLists):
+    nameList = ("consolidateSource-%d" % (vv,) for vv in visitDataLists)
+    depList = ([transformSource[(data.visit, data.ccd)] for data in visitDataLists[vv]]
+               for vv in visitDataLists)
+    cmdList = (getExecutable("pipe_tasks", "consolidateSourceTable.py") + " " + PROC + " " + STDARGS +
+               "  --id visit=%d " % (vv) for vv in visitDataLists)
+    catSchema = os.path.join(getPackageDir("cat"), 'yml', 'hsc.yaml')
+    validateList = ([validate(ConsolidateSourceValidation, DATADIR, visit=vv,
+                              gen3id=dict(instrument="HSC", visit=vv), filepath=catSchema)]
+                    for vv in visitDataLists)
+    return {vv: command(target=name, source=[preConsolidateSource] + dep, cmd=[cmd] + val)
+            for vv, name, dep, cmd, val in zip(visitDataLists, nameList, depList, cmdList, validateList)}
+
+
+consolidateSource = processConsolidateSource(visitDataLists)
 
 patchDataId = dict(tract=0, patch="5,4")
 patchGen3id = dict(skymap="discrete/ci_hsc", tract=0, patch=69)
@@ -439,7 +486,7 @@ consolidateObjectTable = command("consolidateObjectTable", [transformObjectCatal
                                            gen3id=patchGen3id)])
 
 gen3repo = env.Command([os.path.join(REPO_GEN3, "butler.yaml"), os.path.join(REPO, "gen3.sqlite3")],
-                       [forcedPhotCcd, consolidateObjectTable],
+                       [forcedPhotCcd, consolidateObjectTable] + list(consolidateSource.values()),
                        "bin/gen2to3.sh")
 env.Alias("gen3repo", gen3repo)
 

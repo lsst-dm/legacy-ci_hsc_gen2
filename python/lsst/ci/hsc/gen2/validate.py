@@ -23,6 +23,7 @@ __all__ = ["RawValidation", "DetrendValidation", "SfmValidation", "SkyCorrValida
            "WarpValidation", "CoaddValidation", "DetectionValidation", "MergeDetectionsValidation",
            "MeasureValidation", "MergeMeasurementsValidation", "ForcedPhotCoaddValidation",
            "ForcedPhotCcdValidation", "VersionValidation", "DeblendSourcesValidation",
+           "WriteSourceValidation", "TransformSourceValidation", "ConsolidateSourceValidation",
            "WriteObjectValidation", "TransformObjectValidation", "ConsolidateObjectValidation"]
 
 import os
@@ -228,6 +229,27 @@ class Validation(object):
         matches = self.butler.get(self._matchFullDataset, dataId)
         self.assertGreater("Number of full matches", len(matches), self._minMatches)
 
+    def validateSchema(self, dataset, dataId, tableName):
+        """Check the schema of the parquet dataset match that in the DDL"""
+        self.log.info("Validating %s match the schema in %s", dataset, self.filepath)
+        with open(self.filepath, 'r') as f:
+            tables = yaml.safe_load(f)['tables']
+        sdmSchema = [table for table in tables if table['name'] == tableName]
+        self.assertEqual("There should be just one DDL for this table", len(sdmSchema), 1)
+        expectedColumnNames = set(column['name'] for column in sdmSchema[0]['columns'])
+
+        outputTable = self.butler.get(dataset, dataId)
+        # The type of outputTable is lsst.pipe.tasks.parquetTable.ParquetTable
+        # in Gen2, but is pandas.DataFrame in Gen3.
+        if isinstance(outputTable, ParquetTable):
+            df = outputTable.toDataFrame()
+        else:
+            df = outputTable
+
+        outputColumnNames = set(df.columns.to_list())
+        self.assertEqual("The schema matches the DDL in cat yaml",
+                         outputColumnNames, expectedColumnNames)
+
     def run(self, dataId, **kwargs):
         if kwargs:
             dataId = dataId.copy()
@@ -413,30 +435,27 @@ class TransformObjectValidation(Validation):
 
     def run(self, dataId, **kwargs):
         Validation.run(self, dataId, **kwargs)
-
-        self.log.info("Validating objectTable schema to match the schema in %s", self.filepath)
-        with open(self.filepath, 'r') as f:
-            hscSchema = yaml.safe_load(f)['tables']
-
-        objectSchema = [table for table in hscSchema if table['name'] == 'Object']
-        self.assertEqual("There should be just one Object table in the ddl", len(objectSchema), 1)
-        expectedColumnNames = set(column['name'] for column in objectSchema[0]['columns'])
-
-        objectTable = self.butler.get('objectTable', dataId)
-        # The type of objectTable is lsst.pipe.tasks.parquetTable.ParquetTable
-        # in Gen2, but is pandas.DataFrame in Gen3.
-        if isinstance(objectTable, ParquetTable):
-            df = objectTable.toDataFrame()
-        else:
-            df = objectTable
-
-        objectColumnNames = set(df.columns.to_list())
-        self.assertEqual("The schema matches the ddl in cat yaml",
-                         objectColumnNames, expectedColumnNames)
+        Validation.validateSchema(self, 'objectTable', dataId, 'Object')
 
 
 class ConsolidateObjectValidation(Validation):
     _datasets = ["consolidateObjectTable_config", "objectTable_tract"]
+
+
+class WriteSourceValidation(Validation):
+    _datasets = ["writeSourceTable_config", "source"]
+
+
+class TransformSourceValidation(Validation):
+    _datasets = ["transformSourceTable_config", "sourceTable"]
+
+
+class ConsolidateSourceValidation(Validation):
+    _datasets = ["sourceTable_visit"]
+
+    def run(self, dataId, **kwargs):
+        Validation.run(self, dataId, **kwargs)
+        Validation.validateSchema(self, 'sourceTable_visit', dataId, 'Source')
 
 
 class VersionValidation(Validation):
