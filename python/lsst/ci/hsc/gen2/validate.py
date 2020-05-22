@@ -247,6 +247,7 @@ class Validation(object):
             df = outputTable
 
         outputColumnNames = set(df.columns.to_list())
+        self.log.info("Diff: %s",  (outputColumnNames - expectedColumnNames))
         self.assertEqual("The schema matches the DDL in cat yaml",
                          outputColumnNames, expectedColumnNames)
 
