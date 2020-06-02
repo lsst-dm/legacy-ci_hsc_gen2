@@ -260,10 +260,11 @@ calibValidations = [command("calibValidation-%(visit)d-%(ccd)d" % data.dataId, i
                     data in sum(allData.values(), [])]
 
 installExternalData = command("installExternalData", [ingest, links],
-                              [getExecutable("ci_hsc_gen2", "installExternalData.py") +
-                               f" jointcal {REPO} --tract 0 " +
-                               " ".join(f"--visitCcd {dd.visit} {dd.ccd}" for
-                                        dd in sum(allData.values(), []))])
+                              [getExecutable("daf_butler", "butler") + " install-external-data " + REPO +
+                               " --source jointcal --tract 0 " +
+                               " ".join(f"--visit-ccd {dd.visit} {dd.ccd}" for dd in sum(allData.values(), [])
+                              )])
+
 
 refcatName = "ps1_pv3_3pi_20170110"
 refcatPath = os.path.join(REPO, "ref_cats", refcatName)
