@@ -47,7 +47,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
     def testCollections(self):
         """Test that only the correct set of collections is created.
         """
-        expected = {'refcats', 'raw/HSC', 'calib/HSC', 'shared/HSC', 'shared/HSC/rerun/ci_hsc'}
+        expected = {'refcats', 'HSC/raw/all', 'HSC/calib', 'shared/HSC', 'shared/HSC/rerun/ci_hsc'}
         collections = set(self.butler.registry.queryCollections())
         self.assertEqual(collections, expected)
 
@@ -104,10 +104,10 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         added to the Gen3 registry.
         """
         rawDatasetType = self.butler.registry.getDatasetType("raw")
-        calibButler = Butler(GEN3_REPO_ROOT, run="calib/HSC")
+        calibButler = Butler(GEN3_REPO_ROOT, run="HSC/calib")
         cameraRef = None
         bfKernelRef = None
-        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["raw/HSC"]))
+        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["HSC/raw/all"]))
         self.assertEqual(len(rawRefs), 33)
         for rawRef in rawRefs:
             # Expand raw data ID to include implied dimensions (e.g.
@@ -116,7 +116,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
                 with self.subTest(dataset=calibDatasetTypeName):
                     calibDatasetType = self.butler.registry.getDatasetType(calibDatasetTypeName)
                     calibRefs = list(self.butler.registry.queryDatasets(calibDatasetType,
-                                                                        collections=["calib/HSC"],
+                                                                        collections=["HSC/calib"],
                                                                         dataId=rawRef.dataId))
                     # We should have exactly one calib of each type
                     self.assertEqual(len(calibRefs), 1)
