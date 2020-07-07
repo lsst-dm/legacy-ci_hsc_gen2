@@ -91,7 +91,7 @@ def main():
     if args.id:
         intKeys = ["visit", "ccd", "tract"]
         if args.gen3:
-            intKeys.extend(["patch", "sensor", "exposure"])
+            intKeys.extend(["patch", "detector", "exposure"])
         for dataId in args.id:
             dataId = {key: int(value) if key in intKeys else value for
                       key, value in dataId.items()}
