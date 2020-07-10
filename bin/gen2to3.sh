@@ -9,7 +9,6 @@ if [[ $(uname -s) = Darwin* ]]; then
     fi
 fi
 
-INSTRUMENT="--instrument lsst.obs.subaru.HyperSuprimeCam"
 GEN2ROOT="--gen2root $CI_HSC_GEN2_DIR/DATA"
 GEN3ROOT="$CI_HSC_GEN2_DIR/DATAgen3"
 CALIBS="--calibs CALIB"  # note path is relative to GEN2ROOT
@@ -17,4 +16,4 @@ SKYMAPNAME="--skymap-name discrete/ci_hsc"
 SKYMAPCONFIG="--skymap-config skymap.py"
 RERUNS="--reruns rerun/ci_hsc"
 # shellcheck disable=SC2086
-"$DAF_BUTLER_DIR/bin/butler" convert $GEN3ROOT $GEN2ROOT $INSTRUMENT $CALIBS $RERUNS $SKYMAPNAME $SKYMAPCONFIG
+"$DAF_BUTLER_DIR/bin/butler" convert $GEN3ROOT $GEN2ROOT $CALIBS $RERUNS $SKYMAPNAME $SKYMAPCONFIG
