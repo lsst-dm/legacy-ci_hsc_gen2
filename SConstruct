@@ -193,9 +193,10 @@ class Data(Struct):
         dataId["tract"] = tract
         return command("forced-ccd-" + self.name, ingestValidations + calibValidations + [preForcedPhotCcd],
                        [getExecutable("meas_base", "forcedPhotCcd.py") + " " + PROC + " " +
-                       self.id(tract=tract) + " " + STDARGS + " -C forcedPhotCcdConfig.py",
-                       validate(ForcedPhotCcdValidation, DATADIR, dataId,
-                                gen3id=dict(tract=0, skymap="discrete/ci_hsc", **self.gen3id()))])
+                        self.id(tract=tract) + " " + STDARGS + " -C forcedPhotCcdConfig.py" +
+                        " -c externalPhotoCalibName=jointcal",
+                        validate(ForcedPhotCcdValidation, DATADIR, dataId,
+                                 gen3id=dict(tract=0, skymap="discrete/ci_hsc", **self.gen3id()))])
 
 
 allData = {"HSC-R": [Data(903334, 16),
@@ -363,10 +364,12 @@ patchId = " ".join(("%s=%s" % (k, v) for k, v in patchDataId.items()))
 # preWarp, preCoadd and preDetect steps are a work-around for a race on
 # schema/config/versions
 preWarp = command("warp", [skymap, installExternalData],
-                  getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + STDARGS)
+                  getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + STDARGS +
+                  " -c externalPhotoCalibName=jointcal")
 preCoadd = command("coadd", [skymap, brightObj],
                    getExecutable("pipe_tasks", "assembleCoadd.py") + " --warpCompareCoadd  " +
-                   PROC + " " + STDARGS)
+                   PROC + " " + STDARGS +
+                   " -c externalPhotoCalibName=jointcal")
 preDetect = command("detect", skymap,
                     getExecutable("pipe_tasks", "detectCoaddSources.py") + " " + PROC + " " + STDARGS)
 
@@ -380,14 +383,15 @@ def processCoadds(filterName, dataList):
     warps = [command("warp-%d" % exp,
                      [skymap, preWarp] + [skyCorr[exp]],
                      [getExecutable("pipe_tasks", "makeCoaddTempExp.py") + " " + PROC + " " + ident +
-                      " " + " ".join(data.id("--selectId") for data in exposures[exp]) + " " + STDARGS,
+                      " " + " ".join(data.id("--selectId") for data in exposures[exp]) + " " + STDARGS +
+                      " -c externalPhotoCalibName=jointcal",
                       validate(WarpValidation, DATADIR, patchDataId, visit=exp, filter=filterName,
                                gen3id=dict(instrument="HSC", visit=exp, **patchGen3id))
                       ]) for exp in exposures]
     coadd = command("coadd-" + filterName, warps + [preCoadd],
                     [getExecutable("pipe_tasks", "assembleCoadd.py") + " --warpCompareCoadd " + PROC +
                      " " + ident + " " + " ".join(data.id("--selectId") for data in dataList) + " " +
-                     STDARGS,
+                     STDARGS + " -c externalPhotoCalibName=jointcal",
                      validate(CoaddValidation, DATADIR, patchDataId, filter=filterName,
                               gen3id=dict(abstract_filter=filterName[-1].lower(), **patchGen3id))
                      ])
@@ -462,7 +466,8 @@ forcedPhotCoadd = [forcedPhotCoadd(ff) for ff in filterList]
 # preForcedPhotCcd step is a work-around for a race on schema/config/versions
 preForcedPhotCcd = command("forcedPhotCcd", [mapper, mergeMeasurements, installExternalData],
                            getExecutable("meas_base", "forcedPhotCcd.py") + " " + PROC +
-                           " -C forcedPhotCcdConfig.py" + " " + STDARGS)
+                           " -C forcedPhotCcdConfig.py" + " " + STDARGS +
+                           " -c externalPhotoCalibName=jointcal")
 
 forcedPhotCcd = [data.forced(env, tract=0) for data in sum(allData.values(), [])]
 
