@@ -14,6 +14,7 @@ GEN3ROOT="$CI_HSC_GEN2_DIR/DATAgen3"
 CALIBS="--calibs CALIB"  # note path is relative to GEN2ROOT
 SKYMAPNAME="--skymap-name discrete/ci_hsc"
 SKYMAPCONFIG="--skymap-config skymap.py"
+JOINTCAL_DATASET_CONFIG="-C convertJointcalDatasets.py"
 RERUNS="--reruns rerun/ci_hsc"
 # shellcheck disable=SC2086
-"$DAF_BUTLER_DIR/bin/butler" convert $GEN3ROOT $GEN2ROOT $CALIBS $RERUNS $SKYMAPNAME $SKYMAPCONFIG
+"$DAF_BUTLER_DIR/bin/butler" convert $GEN3ROOT $GEN2ROOT $CALIBS $RERUNS $SKYMAPNAME $SKYMAPCONFIG $JOINTCAL_DATASET_CONFIG
