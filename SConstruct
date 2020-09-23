@@ -393,13 +393,13 @@ def processCoadds(filterName, dataList):
                      " " + ident + " " + " ".join(data.id("--selectId") for data in dataList) + " " +
                      STDARGS + " -c externalPhotoCalibName=jointcal",
                      validate(CoaddValidation, DATADIR, patchDataId, filter=filterName,
-                              gen3id=dict(abstract_filter=filterName[-1].lower(), **patchGen3id))
+                              gen3id=dict(band=filterName[-1].lower(), **patchGen3id))
                      ])
     detect = command("detect-" + filterName, [coadd, preDetect],
                      [getExecutable("pipe_tasks", "detectCoaddSources.py") + " " + PROC + " " + ident +
                       " " + STDARGS,
                       validate(DetectionValidation, DATADIR, patchDataId, filter=filterName,
-                               gen3id=dict(abstract_filter=filterName[-1].lower(), **patchGen3id))
+                               gen3id=dict(band=filterName[-1].lower(), **patchGen3id))
                       ])
     return detect
 
@@ -418,7 +418,7 @@ mergeDetections = command("mergeDetections", sum(coadds.values(), []),
 # but the output is a SourceCatalog in each band,
 # we have to validate each band separately
 deblendValidation = [validate(DeblendSourcesValidation, DATADIR, patchDataId, filter=ff,
-                              gen3id=dict(abstract_filter=ff[-1].lower(), **patchGen3id))
+                              gen3id=dict(band=ff[-1].lower(), **patchGen3id))
                      for ff in filterList]
 deblendSources = command("deblendSources", mergeDetections,
                          [getExecutable("pipe_tasks", "deblendCoaddSources.py") + " " + PROC + " --id " +
@@ -435,7 +435,7 @@ def measureCoadds(filterName):
                    [getExecutable("pipe_tasks", "measureCoaddSources.py") + " " + PROC + " --id " +
                     patchId + " filter=" + filterName + " " + STDARGS,
                     validate(MeasureValidation, DATADIR, patchDataId, filter=filterName,
-                             gen3id=dict(abstract_filter=filterName[-1].lower(), **patchGen3id))
+                             gen3id=dict(band=filterName[-1].lower(), **patchGen3id))
                     ])
 
 
@@ -457,7 +457,7 @@ def forcedPhotCoadd(filterName):
                    [getExecutable("meas_base", "forcedPhotCoadd.py") + " " + PROC + " --id " + patchId +
                     " filter=" + filterName + " " + STDARGS,
                     validate(ForcedPhotCoaddValidation, DATADIR, patchDataId, filter=filterName,
-                             gen3id=dict(abstract_filter=filterName[-1].lower(), **patchGen3id))
+                             gen3id=dict(band=filterName[-1].lower(), **patchGen3id))
                     ])
 
 
