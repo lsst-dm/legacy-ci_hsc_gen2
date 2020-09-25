@@ -76,20 +76,20 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         # metadata to construct and use these packers at all.
         for patch in [0, 43, 52]:
             dataId = self.butler.registry.expandDataId(skymap="discrete/ci_hsc", tract=0, patch=patch,
-                                                       abstract_filter='r')
+                                                       band='r')
             packer1 = self.butler.registry.dimensions.makePacker("tract_patch", dataId)
-            packer2 = self.butler.registry.dimensions.makePacker("tract_patch_abstract_filter", dataId)
+            packer2 = self.butler.registry.dimensions.makePacker("tract_patch_band", dataId)
             self.assertNotEqual(packer1.pack(dataId), packer2.pack(dataId))
             self.assertEqual(packer1.unpack(packer1.pack(dataId)),
                              DataCoordinate.standardize(dataId, graph=packer1.dimensions))
             self.assertEqual(packer2.unpack(packer2.pack(dataId)), dataId)
-            self.assertEqual(packer1.pack(dataId, abstract_filter='i'), packer1.pack(dataId))
-            self.assertNotEqual(packer2.pack(dataId, abstract_filter='i'), packer2.pack(dataId))
+            self.assertEqual(packer1.pack(dataId, band='i'), packer1.pack(dataId))
+            self.assertNotEqual(packer2.pack(dataId, band='i'), packer2.pack(dataId))
 
     def testRawFilters(self):
         """Test that raw data has the Filter component set.
         """
-        # Note that the 'r' and 'i' values here look like Gen3 abstract_filter
+        # Note that the 'r' and 'i' values here look like Gen3 band
         # values, but they're something weird in between abstract and physical
         # filters; if we had HSC-R2 data, the corresponding value would be
         # 'r2', not just 'r'.  We need that to be compatible with Gen2 usage
@@ -150,7 +150,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         """Test that bright object masks are included in the Gen3 repo.
         """
         regions = self.butler.get("brightObjectMask", skymap='discrete/ci_hsc', tract=0, patch=69,
-                                  abstract_filter='r')
+                                  band='r')
         self.assertIsInstance(regions, ObjectMaskCatalog)
         self.assertGreater(len(regions), 0)
 

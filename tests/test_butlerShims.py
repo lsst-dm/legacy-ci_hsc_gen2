@@ -57,7 +57,7 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
         self.dataId3a = dict(exposure=903334, detector=16, instrument="HSC")
         # a valid coadd data ID
         self.dataId2b = dict(tract=0, patch="5,4", filter="HSC-I")
-        self.dataId3b = dict(tract=0, patch=69, abstract_filter="i", skymap="discrete/ci_hsc")
+        self.dataId3b = dict(tract=0, patch=69, band="i", skymap="discrete/ci_hsc")
         # a visit+detector data ID that doesn't exist in this repo
         self.dataId2c = dict(visit=1000, ccd=12)
         self.dataId3c = dict(visit=1000, detector=12, instrument="HSC")
