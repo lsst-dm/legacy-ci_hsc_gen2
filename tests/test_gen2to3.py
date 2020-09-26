@@ -49,7 +49,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         """
         expected = {'refcats', 'HSC/raw/all', 'HSC/calib', 'shared/HSC', 'shared/HSC/rerun/ci_hsc'}
         collections = set(self.butler.registry.queryCollections())
-        self.assertEqual(collections, expected)
+        self.assertGreaterEqual(collections, expected)
 
     def testObservationPacking(self):
         """Test that packing Visit+Detector into an integer in Gen3 generates
@@ -104,10 +104,11 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
         added to the Gen3 registry.
         """
         rawDatasetType = self.butler.registry.getDatasetType("raw")
-        calibButler = Butler(GEN3_REPO_ROOT, run="HSC/calib")
         cameraRef = None
         bfKernelRef = None
-        rawRefs = list(self.butler.registry.queryDatasets(rawDatasetType, collections=["HSC/raw/all"]))
+        rawRefs = list(
+            self.butler.registry.queryDatasets(rawDatasetType, collections=["HSC/raw/all"]).expanded()
+        )
         self.assertEqual(len(rawRefs), 33)
         for rawRef in rawRefs:
             # Expand raw data ID to include implied dimensions (e.g.
@@ -115,11 +116,12 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
             for calibDatasetTypeName in ("camera", "bfKernel", "defects"):
                 with self.subTest(dataset=calibDatasetTypeName):
                     calibDatasetType = self.butler.registry.getDatasetType(calibDatasetTypeName)
-                    calibRefs = list(self.butler.registry.queryDatasets(calibDatasetType,
-                                                                        collections=["HSC/calib"],
-                                                                        dataId=rawRef.dataId))
+                    calibRef = self.butler.registry.findDataset(calibDatasetType,
+                                                                collections=["HSC/calib"],
+                                                                dataId=rawRef.dataId,
+                                                                timespan=rawRef.dataId.timespan)
                     # We should have exactly one calib of each type
-                    self.assertEqual(len(calibRefs), 1)
+                    self.assertIsNotNone(calibRef)
 
                     # Try getting those calibs to make sure the files
                     # themselves are where the Butler thinks they are.  We
@@ -127,24 +129,25 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
                     # one of each of those.
                     if calibDatasetTypeName == "camera":
                         if cameraRef is None:
-                            cameraRef = calibRefs[0]
+                            cameraRef = calibRef
                         else:
-                            self.assertEqual(cameraRef, calibRefs[0])
+                            self.assertEqual(cameraRef, calibRef)
                     elif calibDatasetTypeName == "bfKernel":
                         if bfKernelRef is None:
-                            bfKernelRef = calibRefs[0]
+                            bfKernelRef = calibRef
                         else:
-                            self.assertEqual(bfKernelRef, calibRefs[0])
+                            self.assertEqual(bfKernelRef, calibRef)
                     else:
-                        defects = calibButler.get(calibRefs[0])
+                        defects = self.butler.get(calibRef, collections=calibRef.run)
                         self.assertIsInstance(defects, lsst.meas.algorithms.Defects)
 
         instrument = HyperSuprimeCam()
-        cameraFromButler = calibButler.get(cameraRef)
+        cameraFromButler = self.butler.get(cameraRef, collections=cameraRef.run)
         cameraFromInstrument = instrument.getCamera()
         self.assertEqual(len(cameraFromButler), len(cameraFromInstrument))
         self.assertEqual(cameraFromButler.getName(), cameraFromInstrument.getName())
-        self.assertFloatsEqual(calibButler.get(bfKernelRef), instrument.getBrighterFatterKernel())
+        self.assertFloatsEqual(self.butler.get(bfKernelRef, collections=bfKernelRef.run),
+                               instrument.getBrighterFatterKernel())
 
     def testBrightObjectMasks(self):
         """Test that bright object masks are included in the Gen3 repo.
