@@ -21,7 +21,6 @@
 
 import os
 import unittest
-from tempfile import TemporaryDirectory
 
 import lsst.utils.tests
 import lsst.afw.image.testUtils  # noqa; injects test methods into TestCase
@@ -142,7 +141,7 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(list(mergeDet2["id"]), list(mergeDet3["id"]))
 
     def testPut(self):
-        with TemporaryDirectory(dir=TESTDIR) as root:
+        with lsst.utils.tests.temporaryDirectory() as root:
             Butler3.makeRepo(root)
             butler3 = Butler3(root, run="three")
             butler3.registry.registerDatasetType(
@@ -155,10 +154,6 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
             butlerShim.put(catIn, "cat", htm7=131072)
             catOut = butlerShim.get("cat", htm7=131072)
             self.assertEqual(list(catIn["id"]), list(catOut["id"]))
-            # Without this the temporary directory can not be removed
-            # if on NFS because these objects have open SQLite registries.
-            del butler3
-            del butlerShim
 
 
 def setup_module(module):
