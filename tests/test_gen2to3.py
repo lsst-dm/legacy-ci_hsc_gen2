@@ -24,7 +24,7 @@ import unittest
 
 import lsst.utils.tests
 import lsst.afw.image.testUtils  # noqa; injects test methods into TestCase
-import lsst.meas.algorithms
+import lsst.ip.isr
 from lsst.utils import getPackageDir
 from lsst.daf.butler import Butler, DataCoordinate
 from lsst.daf.persistence import Butler as Butler2
@@ -139,7 +139,7 @@ class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
                             self.assertEqual(bfKernelRef, calibRef)
                     else:
                         defects = self.butler.get(calibRef, collections=calibRef.run)
-                        self.assertIsInstance(defects, lsst.meas.algorithms.Defects)
+                        self.assertIsInstance(defects, lsst.ip.isr.Defects)
 
         instrument = HyperSuprimeCam()
         cameraFromButler = self.butler.get(cameraRef, collections=cameraRef.run)
