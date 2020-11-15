@@ -26,7 +26,7 @@ import lsst.utils.tests
 import lsst.afw.image.testUtils  # noqa; injects test methods into TestCase
 import lsst.ip.isr
 from lsst.utils import getPackageDir
-from lsst.daf.butler import Butler, DataCoordinate
+from lsst.daf.butler import Butler, CollectionType, DataCoordinate
 from lsst.daf.persistence import Butler as Butler2
 from lsst.obs.subaru import HyperSuprimeCam
 from lsst.pipe.tasks.objectMasks import ObjectMaskCatalog
@@ -39,17 +39,30 @@ GEN3_REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATAgen3")
 class Gen2ConvertTestCase(lsst.utils.tests.TestCase):
 
     def setUp(self):
-        self.butler = Butler(GEN3_REPO_ROOT, collections="shared/HSC")
+        self.butler = Butler(GEN3_REPO_ROOT, collections="HSC/runs/ci_hsc")
 
     def tearDown(self):
         del self.butler
 
     def testCollections(self):
-        """Test that only the correct set of collections is created.
+        """Test that the correct set of collections is created.
         """
-        expected = {'refcats', 'HSC/raw/all', 'HSC/calib', 'shared/HSC', 'shared/HSC/rerun/ci_hsc'}
-        collections = set(self.butler.registry.queryCollections())
-        self.assertGreaterEqual(collections, expected)
+        self.assertCountEqual(
+            self.butler.registry.getCollectionChain("HSC/defaults"),
+            ["refcats", "skymaps", "HSC/raw/all", "HSC/calib", "HSC/masks", "HSC/external"]
+        )
+        self.assertCountEqual(
+            self.butler.registry.getCollectionChain("refcats"),
+            ["refcats/gen2"],
+        )
+        self.assertEqual(self.butler.registry.getCollectionType("skymaps"), CollectionType.RUN)
+        self.assertEqual(self.butler.registry.getCollectionType("refcats/gen2"), CollectionType.RUN)
+        self.assertEqual(self.butler.registry.getCollectionType("HSC/raw/all"), CollectionType.RUN)
+        self.assertEqual(self.butler.registry.getCollectionType("skymaps"), CollectionType.RUN)
+        self.assertEqual(
+            list(self.butler.registry.queryCollections(..., collectionTypes={CollectionType.CALIBRATION})),
+            ["HSC/calib"],
+        )
 
     def testObservationPacking(self):
         """Test that packing Visit+Detector into an integer in Gen3 generates
