@@ -314,7 +314,13 @@ class SkyCorrValidation(Validation):
 
 
 class SkymapValidation(Validation):
-    _datasets = ["deepCoadd_skyMap"]
+
+    @property
+    def _datasets(self):
+        if self.gen3:
+            return ["skyMap"]
+        else:
+            return ["deepCoadd_skyMap"]
 
 
 class WarpValidation(Validation):

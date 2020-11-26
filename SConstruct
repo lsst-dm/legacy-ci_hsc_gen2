@@ -44,7 +44,7 @@ def validate(cls, root, dataId=None, gen3id=None, filepath=None, **kwargs):
     cmd = [getExecutable("ci_hsc_gen2", "validate.py"), cls.__name__, root]
     if filepath:
         cmd += ["--filepath", filepath]
-    gen3 = cmd + ["--gen3", "--collection", "shared/HSC"]
+    gen3 = cmd + ["--gen3", "--collection", "HSC/runs/ci_hsc"]
     if dataId:
         cmd += ["--id %s" % (" ".join("%s=%s" % (key, value) for key, value in dataId.items()))]
     if gen3id:
