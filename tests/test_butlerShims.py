@@ -36,6 +36,13 @@ GEN3_REPO_ROOT = os.path.join(getPackageDir("ci_hsc_gen2"), "DATAgen3")
 TESTDIR = os.path.abspath(os.path.dirname(__file__))
 
 
+def _clean_metadata_provenance(hdr):
+    """Remove metadata fix up provenance."""
+    for k in list(hdr):
+        if k.startswith("HIERARCH ASTRO METADATA"):
+            del hdr[k]
+
+
 class ButlerShimsTestCase(lsst.utils.tests.TestCase):
 
     @classmethod
@@ -87,6 +94,14 @@ class ButlerShimsTestCase(lsst.utils.tests.TestCase):
         md2Direct = self.butler2.get("raw_md", self.dataId2a).toDict()
         md3FromRaw = raw3.getMetadata().toDict()
         md3Direct = self.butlerShim.get("raw_md", self.dataId3a).toDict()
+
+        # Provenance (especially date) will be different for each metadata
+        # header.
+        _clean_metadata_provenance(md2FromRaw)
+        _clean_metadata_provenance(md2Direct)
+        _clean_metadata_provenance(md3FromRaw)
+        _clean_metadata_provenance(md3Direct)
+
         # Gen2 isn't very careful about stripping metadata the same way in
         # different code paths, so we can only check that the keys that do
         # exist have the same values.
