@@ -7,6 +7,6 @@
 
 from lsst.obs.subaru import HyperSuprimeCam
 
-collection = HyperSuprimeCam.makeCollectionName("external")
+collection = HyperSuprimeCam().makeCollectionName("external")
 config.runs["jointcal_wcs"] = collection
 config.runs["jointcal_photoCalib"] = collection
