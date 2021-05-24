@@ -346,7 +346,7 @@ def processConsolidateSource(visitDataLists):
                for vv in visitDataLists)
     cmdList = (getExecutable("pipe_tasks", "consolidateSourceTable.py") + " " + PROC + " " + STDARGS +
                "  --id visit=%d " % (vv) for vv in visitDataLists)
-    catSchema = os.path.join(getPackageDir("sdm_schemas"), 'yml', 'hsc.yaml')
+    catSchema = os.path.join(getPackageDir("sdm_schemas"), 'yml', 'hsc_gen2.yaml')
     validateList = ([validate(ConsolidateSourceValidation, DATADIR, visit=vv,
                               gen3id=dict(instrument="HSC", visit=vv), filepath=catSchema)]
                     for vv in visitDataLists)
@@ -477,7 +477,7 @@ writeObjectTable = command("writeObjectTable", [forcedPhotCoadd],
                             " --id " + patchId + " filter=" + "^".join(filterList) + " " + STDARGS,
                             validate(WriteObjectValidation, DATADIR, patchDataId, gen3id=patchGen3id)])
 
-catSchema = os.path.join(getPackageDir("sdm_schemas"), 'yml', 'hsc.yaml')
+catSchema = os.path.join(getPackageDir("sdm_schemas"), 'yml', 'hsc_gen2.yaml')
 transformObjectCatalog = command("transformObjectCatalog", [writeObjectTable],
                                  [getExecutable("pipe_tasks", "transformObjectCatalog.py") + " " + PROC +
                                   " --id " + patchId + " " + STDARGS,
