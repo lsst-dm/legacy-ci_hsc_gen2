@@ -143,6 +143,11 @@ class Validation(object):
     def assertEqual(self, description, obj1, obj2):
         self.assertTrue(description + " (%s = %s)" % (obj1, obj2), obj1 == obj2)
 
+    def assertEqualSets(self, description, obj1: set, obj2: set):
+        self.assertTrue(description + " Elements only in the first set: %s = {};" % (obj1.difference(obj2)) +
+                        " Elements only in the second set %s = {}" % (obj2.difference(obj1)),
+                        obj1 == obj2)
+
     def assertGreater(self, description, num1, num2):
         self.assertTrue(description + " (%s > %s)" % (num1, num2), num1 > num2)
 
@@ -262,8 +267,8 @@ class Validation(object):
             df = outputTable
 
         outputColumnNames = set(df.columns.to_list())
-        self.assertEqual("The schema matches the DDL in cat yaml",
-                         outputColumnNames, expectedColumnNames)
+        self.assertEqualSets("The schema matches the DDL in cat yaml",
+                             outputColumnNames, expectedColumnNames)
 
     def run(self, dataId, **kwargs):
         if kwargs:
