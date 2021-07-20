@@ -110,6 +110,8 @@ class Validation(object):
     _matchFullDataset = None  # Dataset name of denormalized matches
     _minMatches = 10  # Minimum number of matches
     _butler = {}
+    # explicit WCS fails
+    _astromFailDataIdList = [{"visit": 903344, "ccd": 0}, {"visit": 903346, "ccd": 1}]
 
     def __init__(self, root, log=None, gen3=False, collection=None, filepath=None):
         if log is None:
@@ -264,25 +266,62 @@ class Validation(object):
             dataId = dataId.copy()
             dataId.update(kwargs)
 
+        # Identify forced-fail astrometry dataIds to skip validation when
+        # appropriate (i.e. datasets not expected to be produced).
+        failedAstrom = False
+        if "ccd" in dataId:
+            ccdStr = "ccd"
+        elif "detector" in dataId:
+            ccdStr = "detector"
+        else:
+            ccdStr = None
+        if "visit" in dataId:
+            visitStr = "visit"
+        elif "exposure" in dataId:
+            visitStr = "exposure"
+        else:
+            visitStr = None
+        if ccdStr is not None and visitStr is not None:
+            for failedDict in self._astromFailDataIdList:
+                if dataId[ccdStr] == failedDict["ccd"] and dataId[visitStr] == failedDict["visit"]:
+                    failedAstrom = True
+                    break
+
         for ds in self._datasets:
-            self.log.info("Validating dataset %s for %s" % (ds, dataId))
-            self.validateDataset(dataId, ds)
+            if failedAstrom:
+                if "forcedPhot" in ds or ds == "forced_src_schema" or ds == "forced_src":
+                    self.log.info("Forced astrometry fail.  Skip validating %s dataset output for %s",
+                                  ds, dataId)
+            else:
+                self.log.info("Validating dataset %s for %s" % (ds, dataId))
+                self.validateDataset(dataId, ds)
 
         for f in self._files:
             self.log.info("Validating file %s for %s" % (f, dataId))
             self.validateFile(dataId, f)
 
         if self._sourceDataset is not None:
-            self.log.info("Validating source output for %s" % dataId)
-            self.validateSources(dataId)
+            if failedAstrom:
+                if self._sourceDataset == "forced_src":
+                    self.log.info("Forced astrometry fail.  Skip validating %s dataset output for %s",
+                                  self._sourceDataset, dataId)
+            else:
+                self.log.info("Validating source output for %s" % dataId)
+                self.validateSources(dataId)
 
         if self._matchDataset is not None:
-            self.log.info("Validating matches output for %s" % dataId)
-            self.validateMatches(dataId)
+            if failedAstrom:
+                self.log.info("Forced astrometry fail.  Skip validating matches output for %s" % dataId)
+            else:
+                self.log.info("Validating matches output for %s" % dataId)
+                self.validateMatches(dataId)
 
         if self._matchFullDataset is not None:
-            self.log.info("Validating matchFull output for %s" % dataId)
-            self.validateMatchFull(dataId)
+            if failedAstrom:
+                self.log.info("Forced astrometry fail.  Skip validating matchFull output for %s" % dataId)
+            else:
+                self.log.info("Validating matchFull output for %s" % dataId)
+                self.validateMatchFull(dataId)
 
     def scons(self, *args, **kwargs):
         """Strip target,source,env from scons' call"""

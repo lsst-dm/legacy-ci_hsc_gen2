@@ -171,7 +171,9 @@ class Data(Struct):
         """Process this data through single frame measurement"""
         return command("sfm-" + self.name, ingestValidations + calibValidations + [preSfm, refcat],
                        [getExecutable("pipe_tasks", "processCcd.py") + " " + PROC + " " + self.id() + " " +
-                        STDARGS + " -c charImage.doWriteExposure=True",
+                        STDARGS + " -c calibrate.astrometry.maxMeanDistanceArcsec=0.025 " +
+                        "calibrate.requireAstrometry=False calibrate.requirePhotoCal=False " +
+                        "charImage.doWriteExposure=True",
                         validate(SfmValidation, DATADIR, self.dataId, gen3id=self.gen3id())])
 
     def writeSource(self, env):
@@ -297,7 +299,9 @@ brightObj = env.Command(brightObjTarget, [mapper, skymap],
 # preSfm step is a work-around for a race on schema/config/versions
 preSfm = command("sfm", [skymap, transmissionCurvesTarget],
                  getExecutable("pipe_tasks", "processCcd.py") + " " + PROC + " " + STDARGS +
-                 " -c charImage.doWriteExposure=True")
+                 " -c calibrate.astrometry.maxMeanDistanceArcsec=0.025 " +
+                 "calibrate.requireAstrometry=False calibrate.requirePhotoCal=False " +
+                 "charImage.doWriteExposure=True")
 env.Depends(preSfm, refcat)
 sfm = {(data.visit, data.ccd): data.sfm(env) for data in sum(allData.values(), [])}
 
