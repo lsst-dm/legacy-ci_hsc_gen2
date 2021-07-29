@@ -485,8 +485,7 @@ class ForcedPhotCoaddValidation(Validation):
 
 
 class ForcedPhotCcdValidation(Validation):
-    _datasets = ["forcedPhotCcd_config", "forcedPhotCcd_metadata",
-                 "forced_src", "forced_src_schema"]
+    _datasets = ["forcedPhotCcd_config", "forcedPhotCcd_metadata", "forced_src_schema"]
     _sourceDataset = "forced_src"
 
 
