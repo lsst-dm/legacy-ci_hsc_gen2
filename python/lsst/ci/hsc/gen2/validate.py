@@ -266,6 +266,7 @@ class Validation(object):
         else:
             df = outputTable
 
+        df.reset_index(inplace=True)
         outputColumnNames = set(df.columns.to_list())
         self.assertEqualSets("The schema matches the DDL in cat yaml",
                              outputColumnNames, expectedColumnNames)
