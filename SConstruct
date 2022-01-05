@@ -236,7 +236,13 @@ allData = {"HSC-R": [Data(903334, 16),
                      ],
            }
 # Link against existing data
-links = env.Command(["CALIB", "raw", "brightObjectMasks", "ps1_pv3_3pi_20170110", "jointcal"], [],
+links = env.Command(["CALIB",
+                     "raw",
+                     "brightObjectMasks",
+                     "ps1_pv3_3pi_20170110",
+                     "gaia_dr2_20200414",
+                     "jointcal"],
+                    [],
                     ["bin/linker.sh"])
 
 # Set up the data repository
@@ -266,11 +272,14 @@ installExternalData = command("installExternalData", [ingest, links],
                                " ".join(f"--visitCcd {dd.visit} {dd.ccd}" for
                                         dd in sum(allData.values(), []))])
 
-refcatName = "ps1_pv3_3pi_20170110"
-refcatPath = os.path.join(REPO, "ref_cats", refcatName)
-refcat = env.Command(refcatPath, mapper,
-                     ["rm -f " + refcatPath,  # Delete any existing, perhaps leftover from previous
-                      "ln -s %s %s" % (os.path.join(root, refcatName), refcatPath)])
+ps1RefcatName = "ps1_pv3_3pi_20170110"
+ps1RefcatPath = os.path.join(REPO, "ref_cats", ps1RefcatName)
+gaiaRefcatName = "gaia_dr2_20200414"
+gaiaRefcatPath = os.path.join(REPO, "ref_cats", gaiaRefcatName)
+refcat = env.Command([ps1RefcatPath, gaiaRefcatPath], mapper,
+                     ["rm -f " + ps1RefcatPath,  # Delete any existing, perhaps leftover from previous
+                      "ln -s %s %s" % (os.path.join(root, ps1RefcatName), ps1RefcatPath),
+                      "ln -s %s %s" % (os.path.join(root, gaiaRefcatName), gaiaRefcatPath)])
 
 # Add transmission curves to the repository.
 transmissionCurvesTarget = os.path.join(REPO, "transmission")
