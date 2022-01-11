@@ -174,19 +174,7 @@ class Validation(object):
         """Utility function for derived classes that want to verify PSF source
         selection and flag setting
         """
-        # pipe_task.propagateVisitFlags sets the flags PSF flag for
-        # all sources based on RA/DEC matching, so parent blends with
-        # children and failed blends are marked as PSF sources.
-        # There is also double counting when using scarlet, so we want
-        # to only check the undeblended isolated sources
-        # (parent sources with only one peak in their footprint)
-        # or the deblended models of isolated sources
-        # (the deblended child for each single peak parent source)
-        # but not both.
-        if "deblend_scarletFlux" in catalog.schema.getNames():
-            primary = catalog["parent"] != 0
-        else:
-            primary = catalog["deblend_nChild"] == 0
+        primary = catalog["detect_isPrimary"]
 
         psfStarsUsed = catalog.get("calib_psf_used") & primary
 
