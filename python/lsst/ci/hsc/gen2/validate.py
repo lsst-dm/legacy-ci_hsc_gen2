@@ -494,7 +494,7 @@ class VersionValidation(Validation):
                       'numpy', 'python', 'scipy']
         ours = ['afw', 'base', 'coadd_utils', 'daf_base', 'daf_persistence', 'ip_diffim', 'ip_isr',
                 'meas_algorithms', 'meas_astrom', 'meas_base', 'meas_deblender', 'meas_extensions_convolved',
-                'meas_extensions_photometryKron', 'meas_extensions_psfex', 'meas_extensions_shapeHSM',
+                'meas_extensions_photometryKron', 'meas_extensions_piff', 'meas_extensions_shapeHSM',
                 'meas_modelfit', 'obs_subaru', 'pex_config', 'pex_exceptions', 'pipe_base', 'pipe_tasks',
                 'shapelet', 'skymap', 'utils']
         for pkg in thirdparty + ours:
